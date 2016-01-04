@@ -1,0 +1,15 @@
+<BREAK> <BREAK> Omega Re gamma Ma Pr <BREAK> <BREAK> nx dt tend dumpinterval solver prefix
+PARAMETERS
+0.02
+100
+1.4
+0.025
+0.7
+
+NUMERICS
+8
+0.000002
+0.002
+0.002
+incompressible
+test
