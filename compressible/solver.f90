@@ -88,6 +88,7 @@ subroutine initialize
   tau_xx = 0d+0
   tau_yy = 0d+0
   tau_xy = 0d+0
+  tau_yx = 0d+0
   rho_u = 0d+0
   rho_v = 0d+0
   Et = 1d+0
@@ -164,6 +165,8 @@ subroutine timestep
      call apply_P_bc
   case('zpg')
      call apply_P_bc_zpg
+  case('cpg')
+     call apply_P_bc_zpg
   case('constP')
      if (t.le.1e-12) print *, 'using const P bc'
   end select
@@ -207,7 +210,7 @@ subroutine calc_fluxes
         end if
         qx(i,j) = -gamma/Re/Pr * (Temp(i+1,j) - Temp(i,j))/dx
         tau_xx(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (2d+0 * dudx - dvdy)
-        tau_xy(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (dudy + dvdx)
+        tau_xy(i,j) = 1d+0 / Re *               (dudy + dvdx)
      end do
   end do
   
@@ -228,7 +231,7 @@ subroutine calc_fluxes
         
         qy(i,j) = -gamma/Re/Pr * (Temp(i,j+1) - Temp(i,j))/dx
         tau_yy(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (2d+0 * dvdy - dudx)
-        tau_yx(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (dudy + dvdx)        
+        tau_yx(i,j) = 1d+0 / Re *               (dudy + dvdx)        
      end do
   end do
   
@@ -250,7 +253,7 @@ subroutine calc_primatives
         rho(i,j) = rho_new(i,j)
         u(i,j) = rho_u(i,j) / rho(i,j)
         v(i,j) = rho_v(i,j) / rho(i,j)
-        P(i,j) = Et(i,j) - gamma*(gamma-1d+0)*rho(i,j)* 0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
+        P(i,j) = Et(i,j) - gamma*(gamma-1d+0)* Ma**2d+0 * rho(i,j)* 0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
         Temp(i,j) = P(i,j)/rho(i,j)
      end do
   end do
@@ -269,7 +272,7 @@ subroutine apply_vel_bc
   integer :: i
   
   do i = 2,nx
-     u(i,nx+1) = 1.0d+0 *sin(t)
+     u(i,nx+1) = 1.0d+0 !*sin(t)
      rho_u(i,nx+1) = u(i,nx+1)*rho(i,nx+1)
      Et(i,nx+1) = P(i,nx+1) + rho(i,nx+1) * gamma*(gamma-1d+0) * Ma**2d+0 * 0.5d+0 * u(i,nx+1)**2d+0
   end do
@@ -307,10 +310,10 @@ subroutine apply_P_bc_zpg
 
   ! density determined from continuity, pressure from ideal gas law
   do i = 2,nx
-     P(i,nx+1) = rho(i,nx) 
-     P(i,1)    = rho(i,2)    
-     P(1,i)    = rho(2,i)    
-     P(nx+1,i) = rho(nx,i) 
+     P(i,nx+1) = P(i,nx)
+     P(i,1)    = P(i,2)    
+     P(1,i)    = P(2,i)    
+     P(nx+1,i) = P(nx,i) 
      rho(i,nx+1) = P(i,nx+1)/Temp(i,nx+1)
      rho(i,1) = P(i,1)/Temp(i,1)
      rho(1,i) = P(1,i)/Temp(1,i)
@@ -318,6 +321,28 @@ subroutine apply_P_bc_zpg
   end do
   
 end subroutine apply_P_bc_zpg
+
+! Constant Pressure Gradient
+! (pressure determined by value at adjacent cell and gradient at adjacent cell * dx)
+subroutine apply_P_bc_cpg
+
+  use parameters
+  implicit none
+  integer :: i
+
+  ! density determined from continuity, pressure from ideal gas law
+  do i = 2,nx
+     P(i,nx+1) = P(i,nx) * 2d+0 - P(i,nx-1)
+     P(i,1)    = P(i,2)  * 2d+0 - P(i,3)  
+     P(1,i)    = P(2,i)  * 2d+0 - P(3,i)  
+     P(nx+1,i) = P(nx,i) * 2d+0 - P(nx-1,i)
+     rho(i,nx+1) = P(i,nx+1)/Temp(i,nx+1)
+     rho(i,1) = P(i,1)/Temp(i,1)
+     rho(1,i) = P(1,i)/Temp(1,i)
+     rho(nx+1,i) = P(nx+1,i)/Temp(nx+1,i)
+  end do
+  
+end subroutine apply_P_bc_cpg
 
 
 ! Pressure NSCBC

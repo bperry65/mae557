@@ -8,9 +8,9 @@ PARAMETERS
 
 NUMERICS
 40
-0.000001
-10
-1
+0.00001
+0.0001
+0.00001
 compressible
 test
-constP
+cpg

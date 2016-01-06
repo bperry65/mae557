@@ -1,10 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-file='test_compressible_nx128_dt5.00E-07_tend2.00E-03'
-file = 'us10-ma0.4'
-unit=9
-time='-10-ma04'
+file='testing'
+unit=10
+time='-test'
 
 f = open(file,'r')
 nx = f.readline()
@@ -55,7 +54,7 @@ plt.axis([0, 1, 0, 1])
 plt.savefig('contour-V' + time + '.png')
 
 plt.figure()
-plot2 = plt.contourf(xx,yy,P[unit],50)
+plot2 = plt.contourf(xx,yy,P[unit],200)
 plt.colorbar(plot2)
 plt.axis([0, 1, 0, 1])
 plt.savefig('contour-P' + time + '.png')
