@@ -1,4 +1,4 @@
-<BREAK> <BREAK> Omega Re gamma Ma Pr <BREAK> <BREAK> nx dt tend dumpinterval solver prefix bc
+<BREAK> <BREAK> Omega Re gamma Ma Pr <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc prefix bc
 PARAMETERS
 0.02
 100
@@ -8,9 +8,9 @@ PARAMETERS
 
 NUMERICS
 40
-0.00001
-0.0001
-0.00001
-compressible
+0.0000001
+1
+0.1
+!upwind
 test
 cpg

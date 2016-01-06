@@ -11,7 +11,7 @@ double precision :: Omega,Re,gamma,Ma,Pr
 double precision :: pi
 character(20) :: filename
 character(75) :: outfile
-character(20) :: solver
+character(20) :: spatial_disc
 character(20) :: prefix
 character(20) :: bc
 
@@ -52,7 +52,7 @@ read(iunit, *) nx
 read(iunit, *) dt
 read(iunit, *) tend
 read(iunit, *) dumpinterval
-read(iunit, *) solver
+read(iunit, *) spatial_disc
 read(iunit, *) prefix
 read(iunit, *) bc
 close(iunit)
@@ -69,7 +69,7 @@ print *, 'Ma', Ma
 print *, 'Pr', Pr
 
 ! name output file
-outfile = trim(prefix) // '_' // trim(solver) 
+outfile = trim(prefix) // '_' // trim(spatial_disc) 
 write(outfile,"(A,I0)"), trim(outfile) // '_nx', nx
 write(outfile,"(A,ES8.2E2)") trim(outfile) // '_dt', dt
 write(outfile,"(A,ES8.2E2)") trim(outfile) // '_tend', tend

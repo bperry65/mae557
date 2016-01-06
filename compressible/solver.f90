@@ -114,47 +114,96 @@ subroutine timestep
   use parameters
   implicit none
 
-  integer :: i,j
+  integer :: i,j,v_up,u_up
   
   t = t + dt
 
   call calc_fluxes
   
   ! Calculate rho, u, v, T at next time step using Forward Euler
-  do i = 2,nx
-     do j = 2,nx
-        rho_new(i,j) = rho(i,j) - dt/Omega * ( &
-             0.5d+0 * (rho_u(i+1,j) - rho_u(i-1,j))/dx + &
-             0.5d+0 * (rho_v(i,j+1) - rho_v(i,j-1))/dx )
-        rho_u(i,j) = rho_u(i,j) - dt/Omega * ( &
-             0.5d+0 / dx * &
-             ( rho(i+1,j)*u(i+1,j)*u(i+1,j) - rho(i-1,j)*u(i-1,j)*u(i-1,j) &
-             + 1d+0/gamma/Ma**2d+0 * (P(i+1,j) - P(i-1,j)) &
-             - 2d+0 * (tau_xx(i,j) - tau_xx(i-1,j))  &
-             + rho(i,j+1)*u(i,j+1)*v(i,j+1) - rho(i,j-1)*u(i,j-1)*v(i,j-1) &
-             - 2d+0 * (tau_yx(i,j) - tau_yx(i,j-1)) ))
-        rho_v(i,j) = rho_v(i,j) - dt/Omega * ( &
-             0.5d+0 / dx * &
-             ( rho(i+1,j)*u(i+1,j)*v(i+1,j) - rho(i-1,j)*u(i-1,j)*v(i-1,j) &
-             - 2d+0 * (tau_xy(i,j) - tau_xy(i-1,j)) &
-             + rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
-             + 1d+0/gamma/Ma**2d+0 * (P(i,j+1) - P(i,j-1)) &
-             - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
-        Et(i,j) = Et(i,j) - dt/Omega * ( &
-             0.5d+0 / dx * &
-             ( Et(i+1,j)*u(i+1,j) - Et(i-1,j)*u(i-1,j) &
-             + (gamma-1d+0) * (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
-             - Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
-             - Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
-             + 2d+0 * (qx(i,j) - qx(i-1,j)) &
-             + Et(i,j+1)*v(i,j+1) - Et(i,j-1)*v(i,j-1) &
-             + (gamma-1d+0) * (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
-             - Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
-             - Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
-             + 2d+0 * (qy(i,j) - qy(i,j-1)) ))
-     end do
-  end do
+  if (trim(spatial_disc).eq.'upwind') then
+     if (t.lt.1d-12+dt) print *, 'Using upwind'
+     if (u(i,j).lt.0d+0) then
+        u_up = 1
+     else
+        u_up = 0
+     end if
+     if (v(i,j).lt.0d+0) then
+        v_up = 1
+     else
+        v_up = 0
+     end if
 
+     do i = 2,nx
+        do j = 2,nx
+           rho_new(i,j) = rho(i,j) - dt/Omega * ( &
+                (rho_u(i+u_up,j) - rho_u(i-1+u_up,j))/dx + &
+                (rho_v(i,j+v_up) - rho_v(i,j-1+v_up))/dx )
+           rho_u(i,j) = rho_u(i,j) - dt/Omega * ( &
+                0.5d+0 / dx * &
+                ( rho(i+1,j)*u(i+1,j)*u(i+1,j) - rho(i-1,j)*u(i-1,j)*u(i-1,j) &
+                + 1d+0/gamma/Ma**2d+0 * (P(i+1,j) - P(i-1,j)) &
+                - 2d+0 * (tau_xx(i,j) - tau_xx(i-1,j))  &
+                + rho(i,j+1)*u(i,j+1)*v(i,j+1) - rho(i,j-1)*u(i,j-1)*v(i,j-1) &
+                - 2d+0 * (tau_yx(i,j) - tau_yx(i,j-1)) ))
+           rho_v(i,j) = rho_v(i,j) - dt/Omega * ( &
+                0.5d+0 / dx * &
+                ( rho(i+1,j)*u(i+1,j)*v(i+1,j) - rho(i-1,j)*u(i-1,j)*v(i-1,j) &
+                - 2d+0 * (tau_xy(i,j) - tau_xy(i-1,j)) &
+                + rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
+                + 1d+0/gamma/Ma**2d+0 * (P(i,j+1) - P(i,j-1)) &
+                - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
+           Et(i,j) = Et(i,j) - dt/Omega * ( &
+                0.5d+0 / dx * &
+                ( Et(i+1,j)*u(i+1,j) - Et(i-1,j)*u(i-1,j) &
+                + (gamma-1d+0) * (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
+                + 2d+0 * (qx(i,j) - qx(i-1,j)) &
+                + Et(i,j+1)*v(i,j+1) - Et(i,j-1)*v(i,j-1) &
+                + (gamma-1d+0) * (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
+                + 2d+0 * (qy(i,j) - qy(i,j-1)) ))
+        end do
+     end do
+
+  else
+     do i = 2,nx
+        do j = 2,nx
+           rho_new(i,j) = rho(i,j) - dt/Omega * ( &
+                0.5d+0 * (rho_u(i+1,j) - rho_u(i-1,j))/dx + &
+                0.5d+0 * (rho_v(i,j+1) - rho_v(i,j-1))/dx )
+           rho_u(i,j) = rho_u(i,j) - dt/Omega * ( &
+                0.5d+0 / dx * &
+                ( rho(i+1,j)*u(i+1,j)*u(i+1,j) - rho(i-1,j)*u(i-1,j)*u(i-1,j) &
+                + 1d+0/gamma/Ma**2d+0 * (P(i+1,j) - P(i-1,j)) &
+                - 2d+0 * (tau_xx(i,j) - tau_xx(i-1,j))  &
+                + rho(i,j+1)*u(i,j+1)*v(i,j+1) - rho(i,j-1)*u(i,j-1)*v(i,j-1) &
+                - 2d+0 * (tau_yx(i,j) - tau_yx(i,j-1)) ))
+           rho_v(i,j) = rho_v(i,j) - dt/Omega * ( &
+                0.5d+0 / dx * &
+                ( rho(i+1,j)*u(i+1,j)*v(i+1,j) - rho(i-1,j)*u(i-1,j)*v(i-1,j) &
+                - 2d+0 * (tau_xy(i,j) - tau_xy(i-1,j)) &
+                + rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
+                + 1d+0/gamma/Ma**2d+0 * (P(i,j+1) - P(i,j-1)) &
+                - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
+           Et(i,j) = Et(i,j) - dt/Omega * ( &
+                0.5d+0 / dx * &
+                ( Et(i+1,j)*u(i+1,j) - Et(i-1,j)*u(i-1,j) &
+                + (gamma-1d+0) * (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
+                + 2d+0 * (qx(i,j) - qx(i-1,j)) &
+                + Et(i,j+1)*v(i,j+1) - Et(i,j-1)*v(i,j-1) &
+                + (gamma-1d+0) * (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
+                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
+                + 2d+0 * (qy(i,j) - qy(i,j-1)) ))
+        end do
+     end do
+  end if
+  
   call calc_primatives
   
   ! Apply boundary conditions
