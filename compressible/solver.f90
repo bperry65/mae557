@@ -139,32 +139,29 @@ subroutine timestep
            rho_new(i,j) = rho(i,j) - dt/Omega * ( &
                 (rho_u(i+u_up,j) - rho_u(i-1+u_up,j))/dx + &
                 (rho_v(i,j+v_up) - rho_v(i,j-1+v_up))/dx )
-           rho_u(i,j) = rho_u(i,j) - dt/Omega * ( &
-                0.5d+0 / dx * &
-                ( rho(i+1,j)*u(i+1,j)*u(i+1,j) - rho(i-1,j)*u(i-1,j)*u(i-1,j) &
-                + 1d+0/gamma/Ma**2d+0 * (P(i+1,j) - P(i-1,j)) &
-                - 2d+0 * (tau_xx(i,j) - tau_xx(i-1,j))  &
-                + rho(i,j+1)*u(i,j+1)*v(i,j+1) - rho(i,j-1)*u(i,j-1)*v(i,j-1) &
-                - 2d+0 * (tau_yx(i,j) - tau_yx(i,j-1)) ))
-           rho_v(i,j) = rho_v(i,j) - dt/Omega * ( &
-                0.5d+0 / dx * &
-                ( rho(i+1,j)*u(i+1,j)*v(i+1,j) - rho(i-1,j)*u(i-1,j)*v(i-1,j) &
-                - 2d+0 * (tau_xy(i,j) - tau_xy(i-1,j)) &
-                + rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
-                + 1d+0/gamma/Ma**2d+0 * (P(i,j+1) - P(i,j-1)) &
-                - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
+           rho_u(i,j) = rho_u(i,j) - dt/Omega/dx * ( &
+                ( rho(i+u_up,j)*u(i+u_up,j)*u(i+u_up,j) - rho(i-1+u_up,j)*u(i-1+u_up,j)*u(i-1+u_up,j) &
+                + 1d+0/gamma/Ma**2d+0 * (P(i+u_up,j) - P(i-1+u_up,j)) &
+                - 1d+0 * (tau_xx(i,j) - tau_xx(i-1,j))  &
+                + rho(i,j+v_up)*u(i,j+v_up)*v(i,j+v_up) - rho(i,j-1+v_up)*u(i,j-1+v_up)*v(i,j-1+v_up) &
+                - 1d+0 * (tau_yx(i,j) - tau_yx(i,j-1)) ))
+           rho_v(i,j) = rho_v(i,j) - dt/Omega/dx * ( &
+                ( rho(i+u_up,j)*u(i+u_up,j)*v(i+u_up,j) - rho(i-1+u_up,j)*u(i-1+u_up,j)*v(i-1+u_up,j) &
+                - 1d+0 * (tau_xy(i,j) - tau_xy(i-1,j)) &
+                + rho(i,j+v_up)*v(i,j+v_up)*v(i,j+v_up) - rho(i,j-1+v_up)*v(i,j-1+v_up)*v(i,j-1+v_up) &
+                + 1d+0/gamma/Ma**2d+0 * (P(i,j+v_up) - P(i,j-1+v_up)) &
+                - 1d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
            Et(i,j) = Et(i,j) - dt/Omega * ( &
-                0.5d+0 / dx * &
-                ( Et(i+1,j)*u(i+1,j) - Et(i-1,j)*u(i-1,j) &
-                + (gamma-1d+0) * (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
-                + 2d+0 * (qx(i,j) - qx(i-1,j)) &
-                + Et(i,j+1)*v(i,j+1) - Et(i,j-1)*v(i,j-1) &
-                + (gamma-1d+0) * (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
-                + 2d+0 * (qy(i,j) - qy(i,j-1)) ))
+                ( Et(i+u_up,j)*u(i+u_up,j) - Et(i-1+u_up,j)*u(i-1+u_up,j) &
+                + (gamma-1d+0) * (P(i+u_up,j)*u(i+u_up,j) - P(i-1+u_up,j)*u(i-1+u_up,j)) &
+                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
+                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
+                + 1d+0 * (qx(i,j) - qx(i-1,j)) &
+                + Et(i,j+v_up)*v(i,j+v_up) - Et(i,j-1+v_up)*v(i,j-1+v_up) &
+                + (gamma-1d+0) * (P(i,j+v_up)*v(i,j+v_up) - P(i,j-1+v_up)*v(i,j-1+v_up)) &
+                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
+                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
+                + 1d+0 * (qy(i,j) - qy(i,j-1)) ))
         end do
      end do
 

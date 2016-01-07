@@ -3,14 +3,14 @@ PARAMETERS
 0.02
 100
 1.4
-0.4
+0.05
 0.7
 
 NUMERICS
 40
-0.0000001
+0.000001
 1
 0.1
-!upwind
+notupwind
 test
-cpg
+constP
