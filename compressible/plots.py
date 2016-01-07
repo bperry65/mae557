@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 file='testing'
-unit=10
+unit=5
 time='-test'
 
 f = open(file,'r')

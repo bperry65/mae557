@@ -14,6 +14,7 @@ character(75) :: outfile
 character(20) :: spatial_disc
 character(20) :: prefix
 character(20) :: bc
+logical :: use_upwind
 
 ! Also include data here
 double precision, dimension(:,:), allocatable :: u, v, rho, P, Temp
@@ -56,6 +57,9 @@ read(iunit, *) spatial_disc
 read(iunit, *) prefix
 read(iunit, *) bc
 close(iunit)
+use_upwind = (trim(spatial_disc).eq.'upwind')
+
+   
 
 ! print variables
 print *, 'nx', nx
