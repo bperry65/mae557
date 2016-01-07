@@ -11,6 +11,6 @@ NUMERICS
 0.00001
 0.5
 0.1
-central
+upwind
 test
-zpg
+cpg

@@ -66,7 +66,7 @@ plt.axis([0, 1, 0, 1])
 plt.savefig('contour-T' + time + '.png')
 
 plt.figure()
-plot2 = plt.contourf(xx,yy,rho[unit],50)
+plot2 = plt.contourf(xx,yy,rho[unit],200)
 plt.colorbar(plot2)
 plt.axis([0, 1, 0, 1])
 plt.savefig('contour-rho' + time + '.png')
