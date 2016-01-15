@@ -1,0 +1,161 @@
+module time_discret
+
+use parameters
+use spatial_discret
+
+implicit none
+
+! for everything
+double precision, pointer :: x(:)
+double precision, pointer :: u(:)
+double precision, pointer :: prevu(:)
+
+! for implicit 
+double precision, pointer :: lvec(:)
+double precision, pointer :: dvec(:)
+double precision, pointer :: uvec(:)
+double precision :: c0new, c1new, cn1new
+
+end module time_discret
+
+
+! =========================================== !
+! initialize time schemes                     !
+! =========================================== !
+
+subroutine init_time_schemes
+
+use time_discret
+implicit none
+
+integer :: i
+
+! Only run for trapezoid method
+if (trim(timescheme).ne.'trapezoid') return
+
+print *, 'using implicit'
+
+allocate(lvec(2:nx-1))
+allocate(dvec(nx-1))
+allocate(uvec(1:(nx-2)))
+
+! calculate constants in matrix (I - D*C/2)
+!  noting that the diagonals of C are const
+c0new  = 1d+0 - D*c0/2d+0
+c1new  = -D*c1/2d+0
+cn1new = -D*cn1/2d+0
+
+print *, c0new, c1new, cn1new
+
+! Calculte L and U for tridiag portion of  (I - D*C/2) (remove last row/column)
+! noting the main diag of L is 1, one lower is lvec, all else is 0
+! main diag of U is d, one above is u, all else is 0
+dvec(1) = c0new
+uvec(1) = c1new
+do i = 2,(nx-2)
+   lvec(i) = cn1new / dvec(i-1)
+   dvec(i) = c0new - lvec(i)*uvec(i-1)
+   uvec(i) = c1new
+end do
+lvec(nx-1) = cn1new / dvec(nx-2)
+dvec(nx-1) = c0new - lvec(nx-1)*uvec(nx-2)
+
+end subroutine init_time_schemes
+
+
+
+! =========================================== !
+! move one step forwrd using trapezoid method !
+! =========================================== !
+
+subroutine trapezoid_step
+
+use time_discret
+implicit none
+
+double precision :: q1(nx), u1(nx-1), u2(nx-1), q2(nx-1), y1(nx-1), y2(nx-1)
+double precision :: a0, a1, an1
+integer :: i
+
+! solving u_{n+1} = u_n + D*C/2 *(u_n + u_{n+1})
+! therefore (I - D*C/2)*{u_n+1} = (I + D*C/2)*u_n
+
+prevu = u
+
+! first, calculate RHS (q1). a{i} are diagonals of (I+D*C/2) matrix
+a0 = 1d+0 + D*c0/2d+0
+a1 = D*c1/2d+0
+an1 = D*cn1/2d+0
+q1(1) = a0*prevu(1) + a1*prevu(2) + an1*prevu(nx)
+q1(nx) = a0*prevu(nx) + a1*prevu(1) + an1*prevu(nx-1)
+do i=2,nx-1
+   q1(i) = a0*prevu(i) + a1*prevu(i+1) + an1*prevu(i-1)
+end do
+
+
+! Use the Thomas algorithm for periodic tridiagonal systems
+! instead of solving A*u_{n+1} = q1, solve A_c*[u1_{n+1}+u2_{n+1}] = q1+q2
+! where A_c is the tridiagonal portion of A. Solve with LU decomposition. 
+! details in report
+q2 = 0d+0
+q2(1) = -cn1new
+q2(nx-1) = -c1new
+
+y1(1) = q1(1)
+y2(1) = q2(1)
+do i=2,nx-1
+   y1(i) = q1(i) - lvec(i) * y1(i-1)
+   y2(i) = q2(i) - lvec(i) * y2(i-1)
+end do
+
+u1(nx-1) = y1(nx-1)/dvec(nx-1)
+u2(nx-1) = y2(nx-1)/dvec(nx-1)
+do i=nx-2,1,-1
+   u1(i) = (y1(i) - uvec(i)*u1(i+1))/dvec(i)
+   u2(i) = (y2(i) - uvec(i)*u2(i+1))/dvec(i)
+end do
+
+! overwrite u with data for new timestep
+u(nx) = ( q1(nx) - c1new*u1(1) - cn1new*u1(nx-1) ) &
+      / ( c0new  + c1new*u2(1) + cn1new*u2(nx-1) )
+do i =1,nx-1
+   u(i) = u1(i) + u2(i)*u(nx)
+end do
+
+t = t + dt
+
+end subroutine trapezoid_step
+
+
+
+! =========================================== !
+! move one step forwrd using forward Euler !
+! =========================================== !
+
+subroutine f_euler_step
+
+use time_discret
+implicit none
+integer :: i
+
+prevu = u
+t = t + dt
+
+if (trim(spatialscheme).eq.'upwind') call sd_Upwind_step(u(1))
+u(1) = prevu(1) &
+     + c0/2d+0*prevu(1)**2d+0 + c1/2d+0*prevu(2)**2d+0 + cn1/2d+0*prevu(nx)**2d+0 &
+     + d0*prevu(1)            + d1*prevu(2)            + dn1*prevu(nx)
+
+if (trim(spatialscheme).eq.'upwind') call sd_Upwind_step(u(nx))
+u(nx) = prevu(nx) &
+     + c0/2d+0*prevu(nx)**2d+0 + c1/2d+0*prevu(1)**2d+0 + cn1/2d+0*prevu(nx-1)**2d+0 &
+     + d0*prevu(nx)            + d1*prevu(1)            + dn1*prevu(nx-1)
+
+do i=2,nx-1
+   if (trim(spatialscheme).eq.'upwind') call sd_Upwind_step(u(i))
+   u(i) = prevu(i) &
+        + c0/2d+0*prevu(i)**2d+0 + c1/2d+0*prevu(i+1)**2d+0 + cn1/2d+0*prevu(i-1)**2d+0 &
+        + d0*prevu(i)            + d1*prevu(i+1)            + dn1*prevu(i-1)
+end do
+
+end subroutine f_euler_step

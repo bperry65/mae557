@@ -1,0 +1,111 @@
+program solver
+
+  use parameters
+  
+  implicit none
+  doubleprecision, dimension(2,2) :: A
+  doubleprecision, dimension(2) :: B
+  integer :: LDA = 2, LDB = 2, N = 2, INFO = 0, NRHS = 1
+  integer, dimension(2) :: IPIV
+  
+  print *, 'hello'
+  ! read inputs
+  call getarg(1,filename)
+  call read_params
+
+  print *, 'dx', dx
+  
+  A(1,1) = 1
+  A(1,2) = 2
+  A(2,1) = 3
+  A(2,2) = 4
+  B(1) = 9
+  B(2) = 11
+
+  print *, A
+  print *, B
+  Print *
+
+  call dgesv(N, NRHS, A, LDA, IPIV, B, LDB, INFO)
+
+  print *, INFO
+  print *, B
+
+  call initialize
+  
+endprogram solver
+
+
+! ============================================================!
+!                        Initialization                       !
+! ============================================================!
+
+subroutine initialize
+
+  use parameters
+  implicit none
+  allocate(u(nx+1,nx+2))
+  allocate(v(nx+2,nx+1))
+  allocate(H1(nx+1,nx+2))
+  allocate(H2(nx+2,nx+1))
+
+  ! initialize and apply initial conditions
+  t = 0d+0
+  u = 0d+0
+  v = 0d+0
+  H1 = 0d+0
+  H2 = 0d+0
+
+  ! apply boundary condition on top wall
+  call apply_vel_bc
+
+  call calculateH
+  
+end subroutine initialize
+
+
+
+! subroutine to set velocity BCs
+
+subroutine apply_vel_bc
+
+  use parameters
+  implicit none
+
+  u(:,nx+2) = 2d+0 *cos(t)
+  
+end subroutine apply_vel_bc
+
+
+
+! subroutine to calculate H
+
+subroutine calculateH
+
+  use parameters
+  implicit none
+
+  integer :: i,j
+  doubleprecision :: d1,d2
+  
+  do j = 2,nx+1
+     do i = 1,nx+1
+        if (i.eq.1) then
+           d1 = ( u(i+1,j)**2d+0 - u(i,j)**2d+0 ) /dx
+	   d3 = ( u(i+2,j) - 2d+0*u(i+1,j) + u(i,j) ) / dx**2d+0
+        else if (i.eq.nx) then
+           d1 = ( u(i,j)**2d+0 - u(i-1,j)**2d+0 ) /dx
+	   d3 = ( u(i-2,j) - 2d+0*u(i-1,j) + u(i,j) ) / dx**2d+0
+        else
+           d1 = ( u(i+1,j)**2d+0 - u(i-1,j)**2d+0 ) /(2d+0*dx)
+	   d3 = ( u(i+1,j) - 2d+0*u(i,j) + u(i-1,j) ) / dx**2d+0
+        end if
+        d2 = ( (u(i,j+1)+u(i,j))*(v(i,j+1)+v(i+1,j+1)) - (u(i,j-1)+u(i,j))*(v(i,j)+v(i+1,j)) ) / (4d+0*dx)
+	d4 = ( u(i,j+1) - 2d+0*u(i,j) + u(i,j-1) ) / dx**2d+0
+        H1(i,j) = d1 + d2 + 1d+0/Re*(d3 + d4)
+     end do
+  end do
+  
+end subroutine calculateH
+
+
