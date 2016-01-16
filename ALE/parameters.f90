@@ -7,7 +7,7 @@ double precision :: dt = 0.5d-3
 double precision :: tend = 100d+0
 double precision :: dumpinterval = 1d+0
 double precision :: dx,dy
-double precision :: Omega,Re,gamma,Ma,Pr,L1,L2
+double precision :: Omega,R,gamma,lambda,L1,L2
 double precision :: pi
 character(20) :: filename
 character(75) :: outfile
@@ -18,6 +18,7 @@ character(20) :: bc
 logical :: use_upwind
 
 ! Also include data here
+double precision, dimension(:), allocatable :: x,y,v_hat
 double precision, dimension(:,:), allocatable :: u, v, v_hat, rho, P, Temp
 double precision, dimension(:,:), allocatable :: tau_xx,tau_yy,tau_xy,tau_yx,qx,qy
 double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, rho_new
@@ -44,10 +45,9 @@ open(UNIT=iunit, FILE=trim(filename))
 read(iunit, *)
 read(iunit, *)
 read(iunit, *) Omega
-read(iunit, *) Re 
+read(iunit, *) R
+read(iunit, *) lambda
 read(iunit, *) gamma
-read(iunit, *) Ma
-read(iunit, *) Pr
 read(iunit, *) L1
 read(iunit, *) L2
 read(iunit, *)
@@ -70,10 +70,9 @@ print *, 'dt', dt
 print *, 'tend', tend
 print *, 'dump interval', dumpinterval
 print *, 'Omega', Omega
-print *, 'Re', Re
+print *, 'R', R
+print *, 'lambda', lambda
 print *, 'gamma', gamma
-print *, 'Ma', Ma
-print *, 'Pr', Pr
 print *, 'L1', L1
 print *, 'L2', L2
 
