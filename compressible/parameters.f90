@@ -13,6 +13,7 @@ character(20) :: filename
 character(75) :: outfile
 character(20) :: spatial_disc
 character(20) :: prefix
+character(20) :: pistvel
 character(20) :: bc
 logical :: use_upwind
 
@@ -21,8 +22,14 @@ double precision, dimension(:,:), allocatable :: u, v, rho, P, Temp
 double precision, dimension(:,:), allocatable :: tau_xx,tau_yy,tau_xy,tau_yx,qx,qy
 double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, rho_new
 
-end module parameters
+! For moving immersed boundary
+logical, dimension(:,:), allocatable :: coveredcells, freshlycleared, ghostcells
+double precision, dimension(:), allocatable :: boundaryloc, xx, yy, boundary_u, boundary_v
+double precision :: F
+integer :: ny
 
+end module parameters
+ 
 
 ! =========================================== !
 ! subroutine to get  inputs from file 'input' !
@@ -47,6 +54,7 @@ read(iunit, *) Re
 read(iunit, *) gamma
 read(iunit, *) Ma
 read(iunit, *) Pr
+read(iunit, *) F !contraction ratio (piston motion amplitude/y-dimension/2)
 read(iunit, *)
 read(iunit, *) 
 read(iunit, *) nx
@@ -54,13 +62,13 @@ read(iunit, *) dt
 read(iunit, *) tend
 read(iunit, *) dumpinterval
 read(iunit, *) spatial_disc
+read(iunit, *) pistvel
 read(iunit, *) prefix
 read(iunit, *) bc
 close(iunit)
 use_upwind = (trim(spatial_disc).eq.'upwind')
 
    
-
 ! print variables
 print *, 'nx', nx
 print *, 'dt', dt
@@ -71,6 +79,7 @@ print *, 'Re', Re
 print *, 'gamma', gamma
 print *, 'Ma', Ma
 print *, 'Pr', Pr
+print *, 'F', F
 
 ! name output file
 outfile = trim(prefix) // '_' // trim(spatial_disc) 
@@ -85,6 +94,8 @@ print *, 'outfile  ', outfile
 ! calculate some other variables
 pi = 4*atan(1d+0)
 dx = 1d+0 / dble(nx)
+ny = nx*(1+F)+1
+print *, nx, F, ny
 
 end subroutine read_params
 

@@ -1,16 +1,18 @@
-<BREAK> <BREAK> Omega Re gamma Ma Pr <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc prefix bc
+<BREAK> <BREAK> Omega Re gamma Ma Pr F <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc pistvel prefix bc
 PARAMETERS
-0.02
+1
 100
 1.4
-0.2
+0.8
 0.7
+0.5
 
 NUMERICS
-40
-0.00001
-0.5
+25
+0.000002
 0.1
-upwind
+0.5
+central
+sinusoid
 test
 cpg
