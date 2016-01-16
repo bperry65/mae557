@@ -1,0 +1,15 @@
+@book{ferziger12,
+  title={Computational methods for fluid dynamics},
+  author={Ferziger, Joel H and Peric, Milovan},
+  year={2012},
+  publisher={Springer Science \& Business Media}
+}
+
+@article{bouma99,
+title = {Premixed combustion on ceramic foam burners},
+journal = {Combustion and Flame},
+author = {Bouma, P.H. and de Goey, L.P.H.},
+year = {1999},
+volume = {119},
+pages = {133--143}
+}

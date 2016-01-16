@@ -159,16 +159,16 @@ subroutine timestep
                 + 1d+0/dy *(rho(i,j+v_up)*v(i,j+v_up)*v(i,j+v_up) - rho(i,j-1+v_up)*v(i,j-1+v_up)*v(i,j-1+v_up) &
                 + 1d+0 * (P(i,j+v_up) - P(i,j-1+v_up)) &
                 - 1d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
-           Et(i,j) = Et(i,j) - dt/Omega * ( &
-                ( Et(i+u_up,j)*u(i+u_up,j) - Et(i-1+u_up,j)*u(i-1+u_up,j) &
-                + (gamma-1d+0) * (P(i+u_up,j)*u(i+u_up,j) - P(i-1+u_up,j)*u(i-1+u_up,j)) &
-                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
-                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
-                + 1d+0 * (qx(i,j) - qx(i-1,j)) &
-                + Et(i,j+v_up)*v(i,j+v_up) - Et(i,j-1+v_up)*v(i,j-1+v_up) &
-                + (gamma-1d+0) * (P(i,j+v_up)*v(i,j+v_up) - P(i,j-1+v_up)*v(i,j-1+v_up)) &
-                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
-                - 0.5d+0 * Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
+           Et(i,j) = Et(i,j) - dt * &
+                (1d+0/dx *( Et(i+u_up,j)*u(i+u_up,j) - Et(i-1+u_up,j)*u(i-1+u_up,j)) &
+                + 1d+0 * (P(i+u_up,j)*u(i+u_up,j) - P(i-1+u_up,j)*u(i-1+u_up,j)) &
+                - 0.5d+0 * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
+                - 0.5d+0 * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
+                + 1d+0 * (qx(i,j) - qx(i-1,j))) &
+                + 1d+0/dy *((Et(i,j+v_up)*v(i,j+v_up) - Et(i,j-1+v_up)*v(i,j-1+v_up)) &
+                + 1d+0 * (P(i,j+v_up)*v(i,j+v_up) - P(i,j-1+v_up)*v(i,j-1+v_up)) &
+                - 0.5d+0 * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
+                - 0.5d+0 * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
                 + 1d+0 * (qy(i,j) - qy(i,j-1)) ))
         end do
      end do
@@ -179,32 +179,32 @@ subroutine timestep
         do j = 2,nx     
            rho_new(i,j) = rho(i,j) - dt * ( &
                 0.5d+0 * (rho(i+1,j)*u(i+1,j) - rho(i-1,j)*u(i-1,j))/dx + &
-                0.5d+0 * (rho(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1))/dx )
-           rho_u(i,j) = rho_u(i,j) - dt/Omega * ( &
+                0.5d+0 * (rho(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1))/dy )
+           rho_u(i,j) = rho_u(i,j) - dt * ( &
                 0.5d+0 / dx * &
                 ( rho(i+1,j)*u(i+1,j)*u(i+1,j) - rho(i-1,j)*u(i-1,j)*u(i-1,j) &
-                + 1d+0/gamma/Ma**2d+0 * (P(i+1,j) - P(i-1,j)) &
-                - 2d+0 * (tau_xx(i,j) - tau_xx(i-1,j))  &
-                + rho(i,j+1)*u(i,j+1)*v(i,j+1) - rho(i,j-1)*u(i,j-1)*v(i,j-1) &
+                + 1d+0 * (P(i+1,j) - P(i-1,j)) &
+                - 2d+0 * (tau_xx(i,j) - tau_xx(i-1,j)))  &
+                + 0.5d+0 / dy *(rho(i,j+1)*u(i,j+1)*v(i,j+1) - rho(i,j-1)*u(i,j-1)*v(i,j-1) &
                 - 2d+0 * (tau_yx(i,j) - tau_yx(i,j-1)) ))
-           rho_v(i,j) = rho_v(i,j) - dt/Omega * ( &
+           rho_v(i,j) = rho_v(i,j) - dt * ( &
                 0.5d+0 / dx * &
                 ( rho(i+1,j)*u(i+1,j)*v(i+1,j) - rho(i-1,j)*u(i-1,j)*v(i-1,j) &
-                - 2d+0 * (tau_xy(i,j) - tau_xy(i-1,j)) &
-                + rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
-                + 1d+0/gamma/Ma**2d+0 * (P(i,j+1) - P(i,j-1)) &
+                - 2d+0 * (tau_xy(i,j) - tau_xy(i-1,j))) &
+                + 0.5d+0 / dy *(rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
+                + 1d+0 * (P(i,j+1) - P(i,j-1)) &
                 - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
-           Et(i,j) = Et(i,j) - dt/Omega * ( &
+           Et(i,j) = Et(i,j) - dt * ( &
                 0.5d+0 / dx * &
                 ( Et(i+1,j)*u(i+1,j) - Et(i-1,j)*u(i-1,j) &
-                + (gamma-1d+0) * (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
-                + 2d+0 * (qx(i,j) - qx(i-1,j)) &
-                + Et(i,j+1)*v(i,j+1) - Et(i,j-1)*v(i,j-1) &
-                + (gamma-1d+0) * (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
-                - Ma**2 * (gamma-1d+0) * gamma * ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
+                + (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
+                - ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
+                - ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
+                + 2d+0 * (qx(i,j) - qx(i-1,j))) &
+                + 0.5d+0 / dy *(Et(i,j+1)*v(i,j+1) - Et(i,j-1)*v(i,j-1) &
+                + (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
+                - ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
+                - ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
                 + 2d+0 * (qy(i,j) - qy(i,j-1)) ))
         end do
      end do
@@ -263,9 +263,9 @@ subroutine calc_fluxes
            dudy = 0.25d+0 *(u(i+1,j+1) + u(i,j+1) - u(i+1,j-1) - u(i,j-1))/dy
            dvdy = 0.25d+0 *(v(i+1,j+1) + v(i,j+1) - v(i+1,j-1) - v(i,j-1))/dy
         end if
-        qx(i,j) = -gamma/Re/Pr * (Temp(i+1,j) - Temp(i,j))/dx
-        tau_xx(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (2d+0 * dudx - dvdy)
-        tau_xy(i,j) = 1d+0 / Re *               (dudy + dvdx)
+        qx(i,j) = lambda * (Temp(i+1,j) - Temp(i,j))/dx
+        tau_xx(i,j) = 2d+0 / 3d+0 * (2d+0 * dudx - dvdy)
+        tau_xy(i,j) =               (dudy + dvdx)
      end do
   end do
   
@@ -284,9 +284,9 @@ subroutine calc_fluxes
            dvdx = 0.25d+0 * (v(i+1,j+1) + v(i+1,j) - v(i-1,j+1) - v(i-1,j))/dx 
         end if
         
-        qy(i,j) = -gamma/Re/Pr * (Temp(i,j+1) - Temp(i,j))/dy
-        tau_yy(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (2d+0 * dvdy - dudx)
-        tau_yx(i,j) = 1d+0 / Re *               (dudy + dvdx)        
+        qy(i,j) = lambda * (Temp(i,j+1) - Temp(i,j))/dy
+        tau_yy(i,j) = 2d+0 / 3d+0 * (2d+0 * dvdy - dudx)
+        tau_yx(i,j) =               (dudy + dvdx)        
      end do
   end do
   
@@ -308,8 +308,8 @@ subroutine calc_primatives
         rho(i,j) = rho_new(i,j)
         u(i,j) = rho_u(i,j) / rho(i,j)
         v(i,j) = rho_v(i,j) / rho(i,j)
-        P(i,j) = Et(i,j) - gamma*(gamma-1d+0)* Ma**2d+0 * rho(i,j)* 0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
-        Temp(i,j) = P(i,j)/rho(i,j)
+        P(i,j) = (gamma-1d+0)* Et(i,j) + rho(i,j)* 0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
+        Temp(i,j) = P(i,j)/(rho(i,j)*R)
      end do
   end do
   
@@ -324,7 +324,7 @@ subroutine apply_vel_bc
 
   use parameters
   implicit none
-  integer :: i,j
+  integer :: i
 
   double precision :: v_w
   
@@ -334,27 +334,24 @@ subroutine apply_vel_bc
      do i = 2,nx
         v(i,nx+1) = v_w
         rho_v(i,nx+1) = v(i,nx+1)*rho(i,nx+1)
-        Et(i,nx+1) = P(i,nx+1) + rho(i,nx+1) * gamma*(gamma-1d+0) * Ma**2d+0 * 0.5d+0 * v(i,nx+1)**2d+0
+        Et(i,nx+1) = P(i,nx+1)/(gamma-1d+0) + rho(i,nx+1) * 0.5d+0 * v(i,nx+1)**2d+0
      end do
-
+    
      do i = 2:nx
-        do j = 2:nx
-           v_hat(i,j) = v_w*(j-1)/dble(nx)
-        end do
+        v_hat(i) = v_w*(i-1)/dble(nx)
      end do
+     
 
   case('sinusoid')
      v_w = pi*Omega*(L2-L1)*sin(2d+0*pi*Omega*t)
      do i = 2,nx
         v(i,nx+1) = v_w
         rho_v(i,nx+1) = v(i,nx+1)*rho(i,nx+1)
-        Et(i,nx+1) = P(i,nx+1) + rho(i,nx+1) * gamma*(gamma-1d+0) * Ma**2d+0 * 0.5d+0 * v(i,nx+1)**2d+0
+        Et(i,nx+1) = P(i,nx+1)/(gamma-1d+0) + rho(i,nx+1) * 0.5d+0 * v(i,nx+1)**2d+0
      end do
 
      do i = 2:nx
-        do j = 2:nx
-           v_hat(i,j) = v_w*(j-1)/dble(nx)
-        end do
+        v_hat(i) = v_w*(i-1)/dble(nx)
      end do
 
   end select
@@ -465,10 +462,10 @@ subroutine apply_P_bc_nscbc
           - L4 * dx / (u(2,i) + Temp(2,i)**0.5d+0 / Ma) &
           + Ma * gamma * rho(2,i) * Temp(2,i)**0.5d+0 * u(2,i)
      ! Update Densities
-     rho(i,nx+1) = P(i,nx+1) / Temp(i,nx+1)
-     rho(i,1) = P(i,1) / Temp(i,1)
-     rho(nx+1,i) = P(nx+1,i) / Temp(nx+1,i)
-     rho(1,i) = P(1,i) / Temp(1,i)
+     rho(i,nx+1) = P(i,nx+1) /(R* Temp(i,nx+1))
+     rho(i,1) = P(i,1) /(R* Temp(i,1))
+     rho(nx+1,i) = P(nx+1,i) /(R* Temp(nx+1,i))
+     rho(1,i) = P(1,i) /(R* Temp(1,i))
   end do
 
 end subroutine apply_P_bc_nscbc

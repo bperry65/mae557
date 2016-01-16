@@ -1,0 +1,190 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% University/School Laboratory Report
+% LaTeX Template
+% Version 3.1 (25/3/14)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Linux and Unix Users Group at Virginia Tech Wiki 
+% (https://vtluug.org/wiki/Example_LaTeX_chem_lab_report)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+\usepackage[version=3]{mhchem} % Package for chemical equation typesetting
+\usepackage{siunitx} % Provides the \SI{}{} and \si{} command for typesetting SI units
+\usepackage{graphicx} % Required for the inclusion of images
+\usepackage{natbib} % Required to change bibliography style to APA
+\usepackage{amsmath} % Required for some math elements 
+
+\def\deriv#1#2{\frac{d #1}{d #2}}
+\def\pp#1#2{\frac{\partial #1}{\partial #2}}
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+\renewcommand{\labelenumi}{\alph{enumi}.} % Make numbering in the enumerate environment by letter rather than number (e.g. section 6)
+
+%\usepackage{times} % Uncomment to use the Times New Roman font
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{} % Title
+
+\author{A. Cody \textsc{Nunno} and Bruce A. \textsc{Perry}} % Author name
+
+\date{\today} % Date for the report
+
+\begin{document}
+
+\maketitle % Insert the title, author and date
+
+
+% If you wish to include an abstract, uncomment the lines below
+\begin{abstract}
+  In the field of computational fluid dynamics (CFD), most algorithms are developed for use in reference frames where the system boundaries are stationary.  Often, however, moving geometries, such as that of a cylindrical piston, must be considered in order to make predictions regarding real systems.  With that in mind, a set of numerical experiments will be performed on a 2D piston geometry with an advancing, receding, or reciprocating boundary.  To address the changing computational domain, two meshing methods will be implemented and compared: the Arbitrary Lagrangian-Eulerian (ALE) method and the Immersed Boundary (IB) method.  ALE uses a moving grid to maintain accuracy and resolution as the geometry of a system changes.  The IB method uses a stationary mesh but requires the addition of a source term to the governing equations near to enforce the boundary conditions when the boundary does not align with the mesh. The advantages and disadvantages of the two methods with regards to simplicity, cost, stability, and accuracy will be compared.
+\end{abstract}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 1
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+
+Moving boundaries are often a necessary evil in examining real problems.  While many applications of fluid dynamics study problems with consistent boundaries, such as boundary layers or pipe flow, still others require movement of the domain boundaries.  Modern airplane wings shift the shape of the wing to have more advantageous properties for takeoff, flight, landing, etc., which necessitates a change in boundary conditions for the flow around the craft.  In an internal combustion engine, pistons move up and down, changing the size of the volume of interest and boundary conditions.  Such scenarios are very difficult to simulate using CFD with conventional boundary conditions.  To this end, other methods have been developed to satisfy these scenarios.
+
+ 
+%----------------------------------------------------------------------------------------
+%	SECTION 2
+%----------------------------------------------------------------------------------------
+
+\section{Background}
+
+The first method to be discussed in this work is the Arbitrary Lagrangian-Eulerian, or ALE, method, which uses a moving grid to accomplish the change in the control volume of interest.  In most fluid dynamics textbooks, fluids are typically examined in two different frames: Eulerian, which examines the flow by focusing on a fixed space as fluid passes through, and Lagrangian, which follows the flow through space as it moves.  Typically, CFD solves its given problem on an Eulerian grid; this simplifies the method of solution by maintaining a consistent grid, since, especially in flows which are turbulent, or would otherwise require a grid with irregular remeshing.  These two frames are typically related to one another through the material derivative, given by:
+\begin{equation}
+  \frac{DF}{Dt} = \deriv{F}{t} + u \cdot \Del F
+\end{equation}
+where F is merely some function in the domain.  This allows us to relate any quantity in the Eulerian frame with a kinematical description linked to the moving particle.  
+
+A similar technique can be applied to a moving grid.  There is no particular reason that the moving frame must be attached to the particle, except that it is a useful descriptor.  In a CFD simulation, the grid is also a convenient frame; however, the grid is typically also unmoving.  In ALE, there is propagation of the grid according to the boundary conditions of the problem, which gives meaning to the idea of tracking the grid.  In this frame, we can define a velocity which is relative to the grid:
+\begin{equation}
+  c = u - \hat{u}
+\end{equation}
+where $\hat{u}$ is the propagation velocity of the grid.  This term, along with the same logic which lead us to the material derivative, allows us to write an expression for the material derivative using quantities in the grid reference frame:
+\begin{equation}
+  \frac{DF}{Dt} = \frac{\eth F}{\eth t} + c \cdot \Del F
+\end{equation}
+where $\frac{\eth F}{\eth t}$ is the derivative in the frame of the grid.  It is essentially the same, but now the material derivative is taken in the frame of the moving grid.  This substitution is required in the equations of motion for the Eulerian $\deriv{F}{t}$ so as to avoid needing to perform inaccurate operations to advance the simulation in time.  In our three governing equations:
+\begin{equation}
+  \frac{\eth \rho}{\eth t} + c \cdot \Del \rho + \rho \Del \cdot u
+\end{equation}
+\begin{equation}
+  \frac{\eth \rho u}{\eth t} + c \cdot \Del (\rho u) + (\rho u)\cdot \Del u = - \Del p + \Del \tau
+\end{equation}
+\begin{equation}
+  \frac{\eth \rho E}{\eth t} + c \cdot \Del (\rho E) + (\rho E)\cdot \Del u = \Del (\sigma u) + \Del (\lambda \Del T)
+\end{equation}
+
+ALE is a very popular method for fluid dynamics simulations which involve a shifting grid, especially those which involve fluid structure interactions.  
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 3
+%----------------------------------------------------------------------------------------
+
+\section{Method of Solution}
+
+\subsection{ALE}
+
+Solving the ALE equations necessitated a compressible flow solver, as the particular problem considered in this work involves significant compression.  Additionally, the implementation in the compressible flow solver was found to be somewhat easier.  To solve these equations, a simple set of finite difference equations have been implemented.  The time integration is done using explicit Euler, and the derivatives of quantities are found using second order central difference from cell corner to corner.  The only exception is the fluxes, which are taken and stored at the midpoints of the cell sides, which is done to ensure that when the derivative of these fluxes are taken, it resembles a second order central difference.  To illustrate, the continuity, momentum, and energy equations, as discretized, are repeated below:
+\begin{equation}
+  
+\end{equation}
+\begin{equation}
+  
+\end{equation}
+\begin{equation}
+  
+\end{equation}
+\begin{equation}
+  
+\end{equation}
+\begin{equation}
+  
+\end{equation}
+The fluxes of density weighted quantities, $\rho$, $\rho u$, $\rho v$, and $\rho e_t$, can be found using these equations.  Other variables, such as $p$ and $T$, can be found using the definition of energy, or the ideal gas equation:
+\begin{equation}
+  
+\end{equation}
+\begin{equation}
+  
+\end{equation}
+The primary difference between this implementation and the implementation used on project one and elsewhere in this project is that the equations are dimensional so as to make the introduction of the grid velocity conceptually simpler.
+
+As we are continuing to use second order central difference and explicit Euler, convergence should be second order in space and first order in time. (INSERT CONVERGENCE HERE)
+Because of the shrinking and expanding grid size, it is impossible to get an exact timestep restriction for ALE.  However, using some analogous 
+
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 4
+%----------------------------------------------------------------------------------------
+
+\section{Application: The Moving Piston}
+
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 5
+%----------------------------------------------------------------------------------------
+
+\section{Discussion of Experimental Uncertainty}
+
+The accepted value (periodic table) is \SI{24.3}{\gram\per\mole} \cite{Smith:2012qr}. The percentage discrepancy between the accepted value and the result obtained here is 1.3\%. Because only a single measurement was made, it is not possible to calculate an estimated standard deviation.
+
+The most obvious source of experimental uncertainty is the limited precision of the balance. Other potential sources of experimental uncertainty are: the reaction might not be complete; if not enough time was allowed for total oxidation, less than complete oxidation of the magnesium might have, in part, reacted with nitrogen in the air (incorrect reaction); the magnesium oxide might have absorbed water from the air, and thus weigh ``too much." Because the result obtained is close to the accepted value it is possible that some of these experimental uncertainties have fortuitously cancelled one another.
+
+%----------------------------------------------------------------------------------------
+%	SECTION 6
+%----------------------------------------------------------------------------------------
+
+\section{Answers to Definitions}
+
+\begin{enumerate}
+\begin{item}
+The \emph{atomic weight of an element} is the relative weight of one of its atoms compared to C-12 with a weight of 12.0000000$\ldots$, hydrogen with a weight of 1.008, to oxygen with a weight of 16.00. Atomic weight is also the average weight of all the atoms of that element as they occur in nature.
+\end{item}
+\begin{item}
+The \emph{units of atomic weight} are two-fold, with an identical numerical value. They are g/mole of atoms (or just g/mol) or amu/atom.
+\end{item}
+\begin{item}
+\emph{Percentage discrepancy} between an accepted (literature) value and an experimental value is
+\begin{equation*}
+\frac{\mathrm{experimental\;result} - \mathrm{accepted\;result}}{\mathrm{accepted\;result}}
+\end{equation*}
+\end{item}
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\bibliographystyle{apalike}
+
+\bibliography{finproj}
+
+%----------------------------------------------------------------------------------------
+
+
+\end{document}
