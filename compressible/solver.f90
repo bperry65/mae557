@@ -7,6 +7,7 @@ program solver
   doubleprecision :: tdump, tprint
   
   ! read inputs and get ready
+
   call getarg(1,filename)
   call read_params
   call initialize
@@ -22,7 +23,8 @@ program solver
      if (t.ge.tprint) then
         print *, 't', t
         tprint = tprint + tend / 1000d+0
-        print *, 'u', u(10,nx-1)
+        print *, 'v', v(10,nx-1)
+        print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
      end if
      
      if (t.ge.tdump - 1d-10) then
@@ -176,9 +178,9 @@ subroutine timestep
         end if
      end do
   end do
-  
-  call calc_primatives
 
+  call calc_primatives
+  
   call update_moving_boundary
   call update_mask
   
@@ -187,7 +189,7 @@ subroutine timestep
   case('zpg')
      call apply_P_bc_zpg
   case('cpg')
-     call apply_P_bc_zpg
+     call apply_P_bc_cpg
   end select
 
   call update_ghost ! update ghost updates the velocity and pressure BCs at the moving boundary
@@ -215,7 +217,7 @@ subroutine calc_fluxes
   
   do i =1,nx
      do j=2,ny
-        if (.not. coveredcells(i,j)) then
+        !if (.not. coveredcells(i,j)) then
            dudx = (u(i+1,j) - u(i,j))/dx
            dvdx = (v(i+1,j) - v(i,j))/dx
            if (i.eq.1) then
@@ -231,13 +233,13 @@ subroutine calc_fluxes
            qx(i,j) = -gamma/Re/Pr * (Temp(i+1,j) - Temp(i,j))/dx
            tau_xx(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (2d+0 * dudx - dvdy)
            tau_xy(i,j) = 1d+0 / Re *               (dudy + dvdx)
-        end if
+        !end if
      end do
   end do
   
   do i = 2,nx
      do j= 1,ny
-        if (.not. coveredcells(i,j)) then
+        !if (.not. coveredcells(i,j)) then
            dudy = (u(i,j+1) - u(i,j))/dx
            dvdy = (v(i,j+1) - v(i,j))/dx
            if (j.eq.1) then
@@ -250,7 +252,7 @@ subroutine calc_fluxes
            qy(i,j) = -gamma/Re/Pr * (Temp(i,j+1) - Temp(i,j))/dx
            tau_yy(i,j) = 1d+0 / Re * 2d+0 / 3d+0 * (2d+0 * dvdy - dudx)
            tau_yx(i,j) = 1d+0 / Re *               (dudy + dvdx)
-        end if
+        !end if
      end do
   end do
   
@@ -410,20 +412,20 @@ subroutine update_moving_boundary
   case('constant')
      do i = 1, nx+1
         if (mod(t+pi/2d+0,2d+0*pi) .lt. pi) then
-           boundaryloc(i) = 1 - F + F*2d+0/pi * (mod(t+pi/2d+0,2d+0*pi))
+           boundaryloc(i) = 1 - pi/2d+0*F + F * (mod(t+pi/2d+0,2d+0*pi))
            boundary_u(i) = 0d+0
-           boundary_v(i) = 2d+0/pi*F*Omega
+           boundary_v(i) = 1d+0
         else
-           boundaryloc(i) = 1 + F - F*2d+0/pi * (mod(t+pi/2d+0,2d+0*pi) - pi)
+           boundaryloc(i) = 1 + pi/2d+0*F - F * (mod(t+pi/2d+0,2d+0*pi) - pi)
            boundary_u(i) = 0d+0
-           boundary_v(i) = -2d+0/pi*F*Omega
+           boundary_v(i) = -1d+0
         end if
      end do
   case('sinusoid')
      do i = 1, nx+1
-        boundaryloc(i) = 1d+0 + F*sin(t)
+        boundaryloc(i) = 1d+0 - F*sin(t)
         boundary_u(i) = 0d+0
-        boundary_v(i) = F*Omega*cos(t)
+        boundary_v(i) = -cos(t)
      end do
   end select
 

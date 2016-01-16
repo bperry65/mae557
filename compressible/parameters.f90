@@ -54,9 +54,8 @@ read(iunit, *) Re
 read(iunit, *) gamma
 read(iunit, *) Ma
 read(iunit, *) Pr
-read(iunit, *) F !contraction ratio (piston motion amplitude/y-dimension/2)
 read(iunit, *)
-read(iunit, *) 
+read(iunit, *)
 read(iunit, *) nx
 read(iunit, *) dt
 read(iunit, *) tend
@@ -79,7 +78,6 @@ print *, 'Re', Re
 print *, 'gamma', gamma
 print *, 'Ma', Ma
 print *, 'Pr', Pr
-print *, 'F', F
 
 ! name output file
 outfile = trim(prefix) // '_' // trim(spatial_disc) 
@@ -94,6 +92,7 @@ print *, 'outfile  ', outfile
 ! calculate some other variables
 pi = 4*atan(1d+0)
 dx = 1d+0 / dble(nx)
+F = 1d+0 / Omega
 ny = nx*(1+F)+1
 print *, nx, F, ny
 
