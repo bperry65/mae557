@@ -7,7 +7,7 @@ double precision :: dt = 0.5d-3
 double precision :: tend = 100d+0
 double precision :: dumpinterval = 1d+0
 double precision :: dx,dy
-double precision :: Omega,R,gamma,lambda,L1,L2
+double precision :: Omega, R, gamma, lambda, L1, L2
 double precision :: pi
 character(20) :: filename
 character(75) :: outfile
@@ -19,9 +19,9 @@ logical :: use_upwind
 
 ! Also include data here
 double precision, dimension(:), allocatable :: x,y,v_hat
-double precision, dimension(:,:), allocatable :: u, v, v_hat, rho, P, Temp
+double precision, dimension(:,:), allocatable :: u, v, rho, P, Temp
 double precision, dimension(:,:), allocatable :: tau_xx,tau_yy,tau_xy,tau_yx,qx,qy
-double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, rho_new
+double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, rho_new, Et_new
 
 end module parameters
 
@@ -90,6 +90,8 @@ print *, 'outfile  ', outfile
 pi = 4*atan(1d+0)
 dx = 1d+0 / dble(nx)
 dy = L1 / dble(nx)
+
+print *, 'where'
 
 end subroutine read_params
 
