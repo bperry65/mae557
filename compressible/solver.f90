@@ -14,9 +14,16 @@ program solver
 
   tdump = dumpinterval
   tprint = tend / 1000d+0
-
+  
   ! run simulation
   do while (t.lt.(tend - 1d-10))
+
+     ! print *, 't', t
+     ! print *, 'boundary', boundaryloc(1)
+     ! do j = 1,ny+1
+     !    print *, coveredcells(:,j), '     ', freshlycleared(:,j), '     ', ghostcells(:,j)
+     ! end do
+     ! print *, ''
      
      call timestep
      
@@ -25,22 +32,17 @@ program solver
         tprint = tprint + tend / 1000d+0
         print *, 'v', v(10,nx-1)
         print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
+   !     print *, 'P  ', P(5,:)
+    !    print *, 'rho', rho(5,:)
+     !   print *, 'v  ', v(5,:)
+      !  print *, 'T  ', Temp(5,:)
      end if
      
      if (t.ge.tdump - 1d-10) then
         call dumpdata
         tdump = tdump + dumpinterval
      end if
-     
-  !   print *, 't', t
-  !   print *, 'boundary', boundaryloc(1)
 
-  !   do j = 1,ny+1
-  !      print *, coveredcells(:,j), '     ', freshlycleared(:,j), '     ', ghostcells(:,j)
-  !   end do
-     
-  !   print *, ''
-     
   end do
 
   call dumpdata
@@ -71,6 +73,7 @@ subroutine initialize
   allocate(tau_yy(nx+1,ny+1))
   allocate(tau_xx(nx+1,ny+1))
   allocate(Et(nx+1,ny+1))
+  allocate(Et_new(nx+1,ny+1))
   allocate(rho_v(nx+1,ny+1))
   allocate(rho_u(nx+1,ny+1))
   allocate(rho_new(nx+1,ny+1))
@@ -83,6 +86,11 @@ subroutine initialize
   allocate(boundary_v(nx+1))
   allocate(xx(nx+1))
   allocate(yy(ny+1))
+
+  if (trim(bc).eq.'density') then
+     allocate(boundary_rho(nx+1))
+     boundary_rho(i) = 1d+0
+  end if
   
   ! initialize and apply initial conditions
   t = 0d+0
@@ -111,8 +119,10 @@ subroutine initialize
   ! apply boundary condition on top wall
   call update_moving_boundary
   call update_mask
+  freshlycleared = .false.
+
   call update_ghost
-  
+
   ! intialize output file
   open(iunit,FILE=trim(outfile))
   write(iunit, *) nx
@@ -158,7 +168,7 @@ subroutine timestep
                 + rho(i,j+1)*v(i,j+1)*v(i,j+1) - rho(i,j-1)*v(i,j-1)*v(i,j-1) &
                 + 1d+0/gamma/Ma**2d+0 * (P(i,j+1) - P(i,j-1)) &
                 - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
-           Et(i,j) = Et(i,j) - dt/Omega * ( &
+           Et_new(i,j) = Et(i,j) - dt/Omega * ( &
                 0.5d+0 / dx * &
                 ( Et(i+1,j)*u(i+1,j) - Et(i-1,j)*u(i-1,j) &
                 + (gamma-1d+0) * (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
@@ -174,18 +184,20 @@ subroutine timestep
            rho_new(i,j) = 1d+0
            rho_u(i,j) = 0d+0
            rho_v(i,j) = 0d+0
-           Et(i,j) = 0d+0
+           Et_new(i,j) = 0d+0
         end if
      end do
   end do
 
   call calc_primatives
-  
+
   call update_moving_boundary
   call update_mask
   
   ! Apply boundary conditions
   select case (bc)
+  case('density')
+     call apply_P_bc_rho
   case('zpg')
      call apply_P_bc_zpg
   case('cpg')
@@ -193,6 +205,7 @@ subroutine timestep
   end select
 
   call update_ghost ! update ghost updates the velocity and pressure BCs at the moving boundary
+
   
 end subroutine timestep
 
@@ -270,8 +283,9 @@ subroutine calc_primatives
   integer :: i,j
 
   do i=2,nx
-     do j=2,nx
+     do j=2,ny
         rho(i,j) = rho_new(i,j)
+        Et(i,j) = Et_new(i,j)
         u(i,j) = rho_u(i,j) / rho(i,j)
         v(i,j) = rho_v(i,j) / rho(i,j)
         P(i,j) = Et(i,j) - gamma*(gamma-1d+0)* Ma**2d+0 * rho(i,j)* 0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
@@ -285,6 +299,25 @@ end subroutine calc_primatives
 ! ============================================================= !
 !                           BCs                                 !
 ! ============================================================= !
+
+! Pressure
+! density determined from continuity, pressure from ideal gas law
+subroutine apply_P_bc_rho
+
+  use parameters
+  implicit none
+  integer :: i
+
+  do i = 2,nx
+     rho(i,1)    = rho(i,1)    - dt/Omega/dx*rho(i,2)*v(i,2)
+     rho(1,i)    = rho(1,i)    - dt/Omega/dx*rho(2,i)*u(2,i)
+     rho(nx+1,i) = rho(nx+1,i) + dt/Omega/dx*rho(nx,i)*u(nx,i)
+     P(i,1) = rho(i,1)*Temp(i,1)
+     P(1,i) = rho(1,i)*Temp(1,i)
+     P(nx+1,i) = rho(nx+1,i)*Temp(nx+1,i)
+  end do
+  
+end subroutine apply_P_bc_rho
 
 ! Zero Pressure Gradient
 ! apply to only moving boundaries
@@ -412,11 +445,11 @@ subroutine update_moving_boundary
   case('constant')
      do i = 1, nx+1
         if (mod(t+pi/2d+0,2d+0*pi) .lt. pi) then
-           boundaryloc(i) = 1 - pi/2d+0*F + F * (mod(t+pi/2d+0,2d+0*pi))
+           boundaryloc(i) = 1d+0 - pi/2d+0*F + F * (mod(t+pi/2d+0,2d+0*pi))
            boundary_u(i) = 0d+0
            boundary_v(i) = 1d+0
         else
-           boundaryloc(i) = 1 + pi/2d+0*F - F * (mod(t+pi/2d+0,2d+0*pi) - pi)
+           boundaryloc(i) = 1d+0 + pi/2d+0*F - F * (mod(t+pi/2d+0,2d+0*pi) - pi)
            boundary_u(i) = 0d+0
            boundary_v(i) = -1d+0
         end if
@@ -451,7 +484,7 @@ subroutine update_ghost
   do j = 1, ny+1
      if (ghostrow.eq.0 .and. ghostcells(2,j).eq.(.true.)) ghostrow = j
   end do
-
+  
   ! Are there freshly cleared cells?
   nfreshcleared = 0
   j = 0
@@ -459,26 +492,37 @@ subroutine update_ghost
      j = j+1
      nfreshcleared = nfreshcleared + 1
   end do
-  a_int = (boundaryloc(1) - yy(ghostrow-1-nfreshcleared)) / (yy(ghostrow) - yy(ghostrow-1-nfreshcleared))
-     
+  a_int = (boundaryloc(2) - yy(ghostrow-1-nfreshcleared)) / (yy(ghostrow) - yy(ghostrow-1-nfreshcleared))
+
+
+  !print *, 'ghostrow', ghostrow, nfreshcleared, a_int
+  !print *, 'bloc', boundaryloc(5), yy(ghostrow), yy(ghostrow-1-nfreshcleared)
+  !print *, ( boundary_v(5) + v(5,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
+  
   ! determine value at ghost cell that results in interpolation at boundary location to meet the boundary condition
   do i = 2,nx
      ! Interpolation
-     u(i,ghostrow) = ( boundary_u(i) + u(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
-     v(i,ghostrow) = ( boundary_v(i) + v(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
-     Temp(i,ghostrow) = ( 1d+0          + Temp(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
+     u(i,ghostrow) = ( boundary_u(i) - u(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
+     v(i,ghostrow) = ( boundary_v(i) - v(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
+     Temp(i,ghostrow) = ( 1d+0          - Temp(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
 
      ! pressure boundary condition
      select case(bc)
+     case('density') ! calculate change in density following boundary, extrapolate to ghost cells
+        boundary_rho(i) = boundary_rho(i) - dt*boundary_rho(i)*(v(i,ghostrow)-v(i,ghostrow-1-nfreshcleared))/(dx+nfreshcleared)
+        rho(i,ghostrow) = ( boundary_rho(i) - rho(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
+        P(i,ghostrow) = rho(i,ghostrow)*Temp(i,ghostrow)
      case('cpg')
         P(i,ghostrow) = P(i,ghostrow-1-nfreshcleared) &
-             + dble(nfreshcleared) * (P(i,ghostrow-1-nfreshcleared) - P(i,ghostrow-2-nfreshcleared))
+             + dble(nfreshcleared+1) * (P(i,ghostrow-1-nfreshcleared) - P(i,ghostrow-2-nfreshcleared))
+        rho(i,ghostrow) = P(i,ghostrow)/Temp(i,ghostrow)
      case('zpg')
         P(i,ghostrow) = P(i,ghostrow-1-nfreshcleared)
+        rho(i,ghostrow) = P(i,ghostrow)/Temp(i,ghostrow)
      end select
 
      ! calculation of other variables
-     rho(i,ghostrow) = P(i,ghostrow)/Temp(i,ghostrow)
+
      rho_u(i,ghostrow) = rho(i,ghostrow)*u(i,ghostrow) 
      rho_v(i,ghostrow) = rho(i,ghostrow)*v(i,ghostrow)
      Et(i,ghostrow) = P(i,ghostrow) + rho(i,ghostrow) * gamma*(gamma-1d+0) * Ma**2d+0 * &
@@ -486,28 +530,39 @@ subroutine update_ghost
   end do
 
   ! Deal with the freshly cleared cells: interpolate from boundary and adjacent cells
-  do i = 2,nx
-     do j = ghostrow-1, ghostrow-nfreshcleared
-        ! Interpolation
-        u(i,j) = u(i,ghostrow-1-nfreshcleared) &
-             + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
-             * (boundary_u(i) - u(i,ghostrow-1-nfreshcleared))
-        v(i,j) = v(i,ghostrow-1-nfreshcleared) &
-             + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
-             * (boundary_v(i) - v(i,ghostrow-1-nfreshcleared))
-        Temp(i,j) = Temp(i,ghostrow-1-nfreshcleared) &
-             + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
-             * (1d+0          - v(i,ghostrow-1-nfreshcleared))
-        P(i,j) = P(i,ghostrow-1-nfreshcleared) &
-             + dble(j-ghostrow+nfreshcleared+1)*(P(i,ghostrow-1-nfreshcleared) - P(i,ghostrow-2-nfreshcleared))
+  if (nfreshcleared .ne. 0) then
+     do i = 2,nx
+        do j = ghostrow-1, ghostrow-nfreshcleared
+           ! Interpolation
+           u(i,j) = u(i,ghostrow-1-nfreshcleared) &
+                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
+                * (boundary_u(i) - u(i,ghostrow-1-nfreshcleared))
+           v(i,j) = v(i,ghostrow-1-nfreshcleared) &
+                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
+                * (boundary_v(i) - v(i,ghostrow-1-nfreshcleared))
+           Temp(i,j) = Temp(i,ghostrow-1-nfreshcleared) &
+                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
+                * (1d+0          - v(i,ghostrow-1-nfreshcleared))
 
-        !calculation of other variables
-        rho(i,j) = P(i,j)/Temp(i,j)
-        rho_u(i,j) = rho(i,j)*u(i,j) 
-        rho_v(i,j) = rho(i,j)*v(i,j)
-        Et(i,j) = P(i,j) + rho(i,j) * gamma*(gamma-1d+0) * Ma**2d+0 * &
-             0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
+           ! Pressure boundary condition
+           select case(bc)
+           case('density')
+              P(i,j) = P(i,ghostrow-1-nfreshcleared)
+           case('cpg')
+              P(i,j) = P(i,ghostrow-1-nfreshcleared) &
+                   + dble(j-ghostrow+nfreshcleared+1)*(P(i,ghostrow-1-nfreshcleared) - P(i,ghostrow-2-nfreshcleared))
+           case('zpg')
+              P(i,j) = P(i,ghostrow-1-nfreshcleared)
+           end select
+        
+           !calculation of other variables
+           rho(i,j) = P(i,j)/Temp(i,j)
+           rho_u(i,j) = rho(i,j)*u(i,j) 
+           rho_v(i,j) = rho(i,j)*v(i,j)
+           Et(i,j) = P(i,j) + rho(i,j) * gamma*(gamma-1d+0) * Ma**2d+0 * &
+                0.5d+0 * (u(i,j)**2d+0 + v(i,j)**2d+0)
+        end do
      end do
-  end do
+  end if
   
 end subroutine update_ghost

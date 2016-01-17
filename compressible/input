@@ -1,17 +1,17 @@
 <BREAK> <BREAK> Omega Re gamma Ma Pr <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc pistvel prefix bc
 PARAMETERS
-2
+4
 100
 1.4
-0.8
+0.1
 0.7
 
 NUMERICS
-20
-0.000001
-4
+40
+0.000005
 0.5
+0.25
 central
 sinusoid
 test
-zpg
+cpg

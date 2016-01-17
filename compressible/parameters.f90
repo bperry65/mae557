@@ -20,11 +20,11 @@ logical :: use_upwind
 ! Also include data here
 double precision, dimension(:,:), allocatable :: u, v, rho, P, Temp
 double precision, dimension(:,:), allocatable :: tau_xx,tau_yy,tau_xy,tau_yx,qx,qy
-double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, rho_new
+double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, Et_new, rho_new
 
 ! For moving immersed boundary
 logical, dimension(:,:), allocatable :: coveredcells, freshlycleared, ghostcells
-double precision, dimension(:), allocatable :: boundaryloc, xx, yy, boundary_u, boundary_v
+double precision, dimension(:), allocatable :: boundaryloc, xx, yy, boundary_u, boundary_v, boundary_rho
 double precision :: F
 integer :: ny
 

@@ -45,15 +45,15 @@ xx, yy = np.meshgrid(x,y)
 
 
 plt.figure()
-plot2 = plt.contourf(xx,yy,U[unit])#,np.arange(-1,1,0.01), extend='both')
+plot2 = plt.contourf(xx,yy,U[unit],np.arange(-1,1,0.01), extend='both')
 plt.colorbar(plot2)
-#plt.axis([0, 1, 0, ny/float(nx)])
+plt.axis([0, 1, 0, ny/float(nx)])
 plt.savefig('contour-U' + time + '.png')
 
 plt.figure()
-plot2 = plt.contourf(xx,yy,V[unit])#,np.arange(-0.5,0.5,0.01), extend='both')
+plot2 = plt.contourf(xx,yy,V[unit],np.arange(-0.5,0.5,0.01), extend='both')
 plt.colorbar(plot2)
-#plt.axis([0, 1, 0, ny/float(nx)])
+plt.axis([0, 1, 0, ny/float(nx)])
 plt.savefig('contour-V' + time + '.png')
 
 plt.figure()
