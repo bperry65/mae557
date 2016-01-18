@@ -30,12 +30,12 @@ program solver
      if (t.ge.tprint) then
         print *, 't', t
         tprint = tprint + tend / 1000d+0
-        print *, 'v', v(10,nx-1)
+        print *, 'v', v(10,15)
         print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
-   !     print *, 'P  ', P(5,:)
-    !    print *, 'rho', rho(5,:)
+       ! print *, 'P  ', P(5,:)
+      !  print *, 'rho', rho(5,:)
      !   print *, 'v  ', v(5,:)
-      !  print *, 'T  ', Temp(5,:)
+    !    print *, 'T  ', Temp(5,:)
      end if
      
      if (t.ge.tdump - 1d-10) then
@@ -531,18 +531,19 @@ subroutine update_ghost
 
   ! Deal with the freshly cleared cells: interpolate from boundary and adjacent cells
   if (nfreshcleared .ne. 0) then
+     print *, 'dogs'
      do i = 2,nx
         do j = ghostrow-1, ghostrow-nfreshcleared
            ! Interpolation
            u(i,j) = u(i,ghostrow-1-nfreshcleared) &
-                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
+                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared+1)*a_int) &
                 * (boundary_u(i) - u(i,ghostrow-1-nfreshcleared))
            v(i,j) = v(i,ghostrow-1-nfreshcleared) &
-                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
+                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared+1)*a_int) &
                 * (boundary_v(i) - v(i,ghostrow-1-nfreshcleared))
            Temp(i,j) = Temp(i,ghostrow-1-nfreshcleared) &
-                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared) + a_int) &
-                * (1d+0          - v(i,ghostrow-1-nfreshcleared))
+                + dble(j-ghostrow+nfreshcleared+1)/(dble(nfreshcleared+1)*a_int) &
+                * (1d+0          - Temp(i,ghostrow-1-nfreshcleared))
 
            ! Pressure boundary condition
            select case(bc)

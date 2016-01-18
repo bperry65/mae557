@@ -1,8 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+#  Command to make gif out of many png
+#  convert -delay 10 -loop 0 $(ls -v *V*png)  V.gif
+
+ 
 file='testing'
-unit=0
+unit=1
 time='-test'
 
 f = open(file,'r')
@@ -43,40 +47,46 @@ x = np.linspace(0,1,nx)
 y = np.linspace(0,ny/float(nx),ny)
 xx, yy = np.meshgrid(x,y)
 
-
-plt.figure()
-plot2 = plt.contourf(xx,yy,U[unit],np.arange(-1,1,0.01), extend='both')
-plt.colorbar(plot2)
-plt.axis([0, 1, 0, ny/float(nx)])
-plt.savefig('contour-U' + time + '.png')
-
-plt.figure()
-plot2 = plt.contourf(xx,yy,V[unit],np.arange(-0.5,0.5,0.01), extend='both')
-plt.colorbar(plot2)
-plt.axis([0, 1, 0, ny/float(nx)])
-plt.savefig('contour-V' + time + '.png')
-
-plt.figure()
-plot2 = plt.contourf(xx,yy,P[unit],200)
-plt.colorbar(plot2)
-plt.axis([0, 1, 0, ny/float(nx)])
-plt.savefig('contour-P' + time + '.png')
-
-plt.figure()
-plot2 = plt.contourf(xx,yy,T[unit],50)
-plt.colorbar(plot2)
-plt.axis([0, 1, 0, ny/float(nx)])
-plt.savefig('contour-T' + time + '.png')
-
-plt.figure()
-plot2 = plt.contourf(xx,yy,rho[unit],200)
-plt.colorbar(plot2)
-plt.axis([0, 1, 0, ny/float(nx)])
-plt.savefig('contour-rho' + time + '.png')
-
-plt.figure()
-plot1 = plt.streamplot(xx,yy,U[unit],V[unit],color=vel[unit])
-plt.colorbar()
-plt.axis([0, 1, 0, ny/float(nx)])
-plt.savefig('streamplot' + time + '.png')
-
+for unit in range(nsteps):
+    plt.figure()
+    plot2 = plt.contourf(xx,yy,U[unit],np.arange(-1,1,0.01), extend='both')
+    plt.colorbar(plot2)
+    plt.axis([0, 1, 0, ny/float(nx)])
+    plt.savefig('contour-U' + str(unit) + '.png')
+    plt.close()
+    #
+    plt.figure()
+    plot2 = plt.contourf(xx,yy,V[unit],np.arange(-0.5,0.5,0.01), extend='both')
+    plt.colorbar(plot2)
+    plt.axis([0, 1, 0, ny/float(nx)])
+    plt.savefig('contour-V' + str(unit) + '.png')
+    plt.close()
+    #
+    plt.figure()
+    plot2 = plt.contourf(xx,yy,P[unit],200)
+    plt.colorbar(plot2)
+    plt.axis([0, 1, 0, ny/float(nx)])
+    plt.savefig('contour-P' + str(unit) + '.png')
+    plt.close()
+    #
+    plt.figure()
+    plot2 = plt.contourf(xx,yy,T[unit],50)
+    plt.colorbar(plot2)
+    plt.axis([0, 1, 0, ny/float(nx)])
+    plt.savefig('contour-T' + str(unit) + '.png')
+    plt.close()
+    #
+    # plt.figure()
+    # plot2 = plt.contourf(xx,yy,rho[unit],200)
+    # plt.colorbar(plot2)
+    # plt.axis([0, 1, 0, ny/float(nx)])
+    # plt.savefig('contour-rho' + str(unit) + '.png')
+    # plt.close()
+    #
+    # plt.figure()
+    # plot1 = plt.streamplot(xx,yy,U[unit],V[unit],color=vel[unit])
+    # plt.colorbar()
+    # plt.axis([0, 1, 0, ny/float(nx)])
+    # plt.savefig('streamplot' + str(unit) + '.png')
+    # plt.close()
+    print unit
