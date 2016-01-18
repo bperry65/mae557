@@ -58,14 +58,14 @@ for unit in range(nsteps):
     plt.figure()
     plot2 = plt.contourf(xx,yy,V[unit],np.arange(-1,1,0.01), extend='both')
     plt.colorbar(plot2)
-    plt.axis([0, 1, 0, ny/float(nx)])
+    plt.axis([0, 1, 0, 1.2])
     plt.savefig('contour-V' + str(unit) + '.png')
     plt.close()
     #
     plt.figure()
     plot2 = plt.contourf(xx,yy,P[unit],np.arange(0,2,0.01), extend='both')
     plt.colorbar(plot2)
-    plt.axis([0, 1, 0, ny/float(nx)])
+    plt.axis([0, 1, 0, 1.2])
     plt.savefig('contour-P' + str(unit) + '.png')
     plt.close()
     #

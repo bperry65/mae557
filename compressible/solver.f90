@@ -19,12 +19,15 @@ program solver
   do while (t.lt.(tend - 1d-10))
      
      call timestep
+
+     call mass_conservation
      
      if (t.ge.tprint) then
         print *, 't', t
         tprint = tprint + tend / 1000d+0
         print *, 'v', v(10,15)
         print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
+        print *, 'mass', total_mass
         !print *, 'P  ', P(5,:)
         !print *, 'rho', rho(5,:)
         !print *, 'v  ', v(5,:)
@@ -445,12 +448,17 @@ subroutine update_moving_boundary
 
   select case (pistvel)
   case('constantplus')
-     do i = 1,nc+1
-        boundaryloc(i) = 1d+0 + F *
+     do i = 1,nx+1
+        boundaryloc(i) = 1d+0 + F*t
         boundary_u(i) = 0d+0
         boundary_v(i) = 1d+0
      end do
-     
+  case('constantminus')
+     do i = 1,nx+1
+        boundaryloc(i) = 1d+0 - F*t
+        boundary_u(i) = 0d+0
+        boundary_v(i) = -1d+0
+     end do     
   case('constant')
      do i = 1, nx+1
         if (mod(t+pi/2d+0,2d+0*pi) .lt. pi) then
@@ -485,7 +493,7 @@ subroutine update_ghost
   use parameters
   implicit none
 
-  integer :: i,j,ghostrow, nfreshcleared
+  integer :: i,j, nfreshcleared
   double precision :: a_int ! coefficient for interpolation
 
   ! Where are the ghost cells?
@@ -579,3 +587,38 @@ subroutine update_ghost
   end if
   
 end subroutine update_ghost
+
+
+
+! ============================================================= !
+!                     Check mass conservation                   !
+! ============================================================= !
+
+subroutine mass_conservation
+
+  use parameters
+  implicit none
+
+  integer :: i,j
+
+  total_mass = 0d+0
+  
+  do i = 2,nx
+     do j=2,ny
+        if (.not. coveredcells(i,j)) then
+           total_mass = total_mass + rho(i,j)*dx*dx
+        end if
+     end do
+     total_mass = total_mass + &
+          (rho(i,ghostrow-1) + (boundaryloc(i) - yy(ghostrow-1))/dx * (rho(i,ghostrow)-rho(i,ghostrow))) &
+          * dx *(boundaryloc(i) - yy(ghostrow-1))  
+     total_mass = total_mass + rho(i,1)*dx*dx/2
+  end do
+
+  do j = 2,ny
+     total_mass = total_mass + (rho(1,j) + rho(nx+1,j))*dx*dx/2
+  end do
+
+  total_mass = total_mass + (rho(1,1) + rho(nx+1,1))*dx*dx/4
+  
+end subroutine mass_conservation

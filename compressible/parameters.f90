@@ -6,6 +6,7 @@ double precision :: t = 0.0d+0
 double precision :: dt = 0.5d-3
 double precision :: tend = 100d+0
 double precision :: dumpinterval = 1d+0
+double precision :: total_mass = 0d+0
 double precision :: dx
 double precision :: Omega,Re,gamma,Ma,Pr
 double precision :: pi
@@ -26,7 +27,7 @@ double precision, dimension(:,:), allocatable :: rho_u, rho_v, Et, Et_new, rho_n
 logical, dimension(:,:), allocatable :: coveredcells, freshlycleared, ghostcells
 double precision, dimension(:), allocatable :: boundaryloc, xx, yy, boundary_u, boundary_v, boundary_rho
 double precision :: F
-integer :: ny
+integer :: ny, ghostrow
 
 end module parameters
  

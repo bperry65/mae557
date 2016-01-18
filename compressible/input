@@ -1,17 +1,17 @@
 <BREAK> <BREAK> Omega Re gamma Ma Pr <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc pistvel prefix bc
 PARAMETERS
-5
-5
+2.5
+100
 1.4
-0.1
+0.8
 0.7
 
 NUMERICS
 40
-0.00001
-1.570796
-0.052359
+0.000002
+1
+0.04
 central
-constant
-test
+constantminus
+test1
 cpg
