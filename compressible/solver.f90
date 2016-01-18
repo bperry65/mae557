@@ -17,13 +17,6 @@ program solver
   
   ! run simulation
   do while (t.lt.(tend - 1d-10))
-
-     ! print *, 't', t
-     ! print *, 'boundary', boundaryloc(1)
-     ! do j = 1,ny+1
-     !    print *, coveredcells(:,j), '     ', freshlycleared(:,j), '     ', ghostcells(:,j)
-     ! end do
-     ! print *, ''
      
      call timestep
      
@@ -32,10 +25,10 @@ program solver
         tprint = tprint + tend / 1000d+0
         print *, 'v', v(10,15)
         print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
-       ! print *, 'P  ', P(5,:)
-      !  print *, 'rho', rho(5,:)
-     !   print *, 'v  ', v(5,:)
-    !    print *, 'T  ', Temp(5,:)
+        !print *, 'P  ', P(5,:)
+        !print *, 'rho', rho(5,:)
+        !print *, 'v  ', v(5,:)
+        !print *, 'T  ', Temp(5,:)
      end if
      
      if (t.ge.tdump - 1d-10) then
@@ -310,11 +303,14 @@ subroutine apply_P_bc_rho
 
   do i = 2,nx
      rho(i,1)    = rho(i,1)    - dt/Omega/dx*rho(i,2)*v(i,2)
-     rho(1,i)    = rho(1,i)    - dt/Omega/dx*rho(2,i)*u(2,i)
-     rho(nx+1,i) = rho(nx+1,i) + dt/Omega/dx*rho(nx,i)*u(nx,i)
      P(i,1) = rho(i,1)*Temp(i,1)
+  end do
+
+  do i = 2,ny
      P(1,i) = rho(1,i)*Temp(1,i)
      P(nx+1,i) = rho(nx+1,i)*Temp(nx+1,i)
+     rho(1,i)    = rho(1,i)    - dt/Omega/dx*rho(2,i)*u(2,i)
+     rho(nx+1,i) = rho(nx+1,i) + dt/Omega/dx*rho(nx,i)*u(nx,i)
   end do
   
 end subroutine apply_P_bc_rho
@@ -329,13 +325,16 @@ subroutine apply_P_bc_zpg
 
   do i = 2,nx
      P(i,1)    = P(i,2)    
-     P(1,i)    = P(2,i)    
-     P(nx+1,i) = P(nx,i) 
      rho(i,1) = P(i,1)/Temp(i,1)
+  end do
+
+  do i = 2,ny
+     P(1,i)    = P(2,i)    
+     P(nx+1,i) = P(nx,i)
      rho(1,i) = P(1,i)/Temp(1,i)
      rho(nx+1,i) = P(nx+1,i)/Temp(nx+1,i)
   end do
-  
+     
 end subroutine apply_P_bc_zpg
 
 
@@ -350,11 +349,14 @@ subroutine apply_P_bc_cpg
 
   do i = 2,nx
      P(i,1)    = P(i,2)  * 2d+0 - P(i,3)  
-     P(1,i)    = P(2,i)  * 2d+0 - P(3,i)  
-     P(nx+1,i) = P(nx,i) * 2d+0 - P(nx-1,i)
      rho(i,1) = P(i,1)/Temp(i,1)
+  end do
+
+  do i = 2,ny
      rho(1,i) = P(1,i)/Temp(1,i)
      rho(nx+1,i) = P(nx+1,i)/Temp(nx+1,i)
+     P(1,i)    = P(2,i)  * 2d+0 - P(3,i)  
+     P(nx+1,i) = P(nx,i) * 2d+0 - P(nx-1,i)
   end do
   
 end subroutine apply_P_bc_cpg
@@ -442,6 +444,13 @@ subroutine update_moving_boundary
   integer :: i
 
   select case (pistvel)
+  case('constantplus')
+     do i = 1,nc+1
+        boundaryloc(i) = 1d+0 + F *
+        boundary_u(i) = 0d+0
+        boundary_v(i) = 1d+0
+     end do
+     
   case('constant')
      do i = 1, nx+1
         if (mod(t+pi/2d+0,2d+0*pi) .lt. pi) then
@@ -456,9 +465,9 @@ subroutine update_moving_boundary
      end do
   case('sinusoid')
      do i = 1, nx+1
-        boundaryloc(i) = 1d+0 - F*sin(t)
+        boundaryloc(i) = 1d+0 + F*(1d+0 - cos(t))
         boundary_u(i) = 0d+0
-        boundary_v(i) = -cos(t)
+        boundary_v(i) = +sin(t)
      end do
   end select
 
@@ -493,11 +502,6 @@ subroutine update_ghost
      nfreshcleared = nfreshcleared + 1
   end do
   a_int = (boundaryloc(2) - yy(ghostrow-1-nfreshcleared)) / (yy(ghostrow) - yy(ghostrow-1-nfreshcleared))
-
-
-  !print *, 'ghostrow', ghostrow, nfreshcleared, a_int
-  !print *, 'bloc', boundaryloc(5), yy(ghostrow), yy(ghostrow-1-nfreshcleared)
-  !print *, ( boundary_v(5) + v(5,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
   
   ! determine value at ghost cell that results in interpolation at boundary location to meet the boundary condition
   do i = 2,nx
@@ -505,6 +509,14 @@ subroutine update_ghost
      u(i,ghostrow) = ( boundary_u(i) - u(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
      v(i,ghostrow) = ( boundary_v(i) - v(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
      Temp(i,ghostrow) = ( 1d+0          - Temp(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
+
+     !print *, a_int
+     if (a_int .le. 1d-4) then
+        !print *, 'Im here'
+        u(i,ghostrow) = boundary_u(i)
+        v(i,ghostrow) = boundary_v(i)
+        Temp(i,ghostrow) = 1d+0
+     end if
 
      ! pressure boundary condition
      select case(bc)

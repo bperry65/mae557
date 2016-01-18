@@ -93,7 +93,7 @@ print *, 'outfile  ', outfile
 pi = 4*atan(1d+0)
 dx = 1d+0 / dble(nx)
 F = 1d+0 / Omega
-ny = nx*(1+F)+1
+ny = nx*(1+2*F)+1
 print *, nx, F, ny
 
 end subroutine read_params
