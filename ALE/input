@@ -1,18 +1,19 @@
-<BREAK> <BREAK> Omega R lambda gamma L1 L2 <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc pistvel prefix bc
+<BREAK> <BREAK> Omega R lambda gamma visc L1 L2 <BREAK> <BREAK> nx dt tend dumpinterval spatial_disc pistvel prefix bc
 PARAMETERS
 1
 287
 0.0257
 1.4
+0.1
 1
 1.4
 
 NUMERICS
-40
-0.00001
-0.5
-0.1
+320
+0.000000025
+0.002
+0.0001
 centered
 sinusoid
 test
-zpg
+cpg

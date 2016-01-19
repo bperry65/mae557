@@ -211,15 +211,15 @@ subroutine timestep
                 - 2d+0 * (tau_yy(i,j) - tau_yy(i,j-1)) ))
            Et_new(i,j) = Et(i,j) - dt * ( &
                 0.5d+0 / dx * &
-                (u(i,j) * ( Et(i+1,j) - Et(i-1,j)) &
-                + Et(i,j) * (u(i+1,j) - u(i-1,j)) &
-                + (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) &
+                (u(i,j) * ( Et(i+1,j) - Et(i-1,j)) & !
+                + Et(i,j) * (u(i+1,j) - u(i-1,j)) & !
+                + (P(i+1,j)*u(i+1,j) - P(i-1,j)*u(i-1,j)) & !
                 - ( (u(i+1,j)+u(i,j))*tau_xx(i,j) - (u(i-1,j)+u(i,j))*tau_xx(i-1,j) ) &
                 - ( (v(i+1,j)+v(i,j))*tau_xy(i,j) - (v(i-1,j)+v(i,j))*tau_xy(i-1,j) ) &
                 + 2d+0 * (qx(i,j) - qx(i-1,j))) &
-                + 0.5d+0 / dy *((v(i,j)-v_hat(j)) * (Et(i,j+1) - Et(i,j-1)) &
-                + Et(i,j) * (v(i,j+1) - v(i,j-1)) &
-                + (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) &
+                + 0.5d+0 / dy *((v(i,j)-v_hat(j)) * (Et(i,j+1) - Et(i,j-1)) & !
+                + Et(i,j) * (v(i,j+1) - v(i,j-1)) & !
+                + (P(i,j+1)*v(i,j+1) - P(i,j-1)*v(i,j-1)) & !
                 - ( (u(i,j+1)+u(i,j))*tau_yx(i,j) - (u(i,j-1)+u(i,j))*tau_yx(i,j-1) ) &
                 - ( (v(i,j+1)+v(i,j))*tau_yy(i,j) - (v(i,j-1)+v(i,j))*tau_yy(i,j-1) ) &
                 + 2d+0 * (qy(i,j) - qy(i,j-1)) ))
@@ -281,8 +281,8 @@ subroutine calc_fluxes
            dvdy = 0.25d+0 *(v(i+1,j+1) + v(i,j+1) - v(i+1,j-1) - v(i,j-1))/dy
         end if
         qx(i,j) = lambda * (Temp(i+1,j) - Temp(i,j))/dx
-        tau_xx(i,j) = 2d+0 / 3d+0 * (2d+0 * dudx - dvdy)
-        tau_xy(i,j) =               (dudy + dvdx)
+        tau_xx(i,j) = 2d+0 / 3d+0 * visc * (2d+0 * dudx - dvdy)
+        tau_xy(i,j) =               visc * (dudy + dvdx)
      end do
   end do
   
@@ -302,8 +302,8 @@ subroutine calc_fluxes
         end if
         
         qy(i,j) = lambda * (Temp(i,j+1) - Temp(i,j))/dy
-        tau_yy(i,j) = 2d+0 / 3d+0 * (2d+0 * dvdy - dudx)
-        tau_yx(i,j) =               (dudy + dvdx)        
+        tau_yy(i,j) = 2d+0 / 3d+0 * visc * (2d+0 * dvdy - dudx)
+        tau_yx(i,j) =               visc * (dudy + dvdx)        
      end do
   end do
   
@@ -377,34 +377,31 @@ subroutine apply_vel_bc
   integer :: i
 
   double precision :: v_w
-  !print *, 'f**k'
   select case (pistvel)
+  ! Constant advancement and withdrawal wall BCs
   case('constant')
-     v_w = 2d+0*Omega*(L1-L2)*cos(2d+0*pi*Omega*(t+1d+0/4d+0))/sqrt(1d+0-sin(2d+0*pi*Omega*(t+1/4d+0))**2d+0)
+     v_w = 2d+0*(L2-L1)*Omega !2d+0*Omega*(L1-L2)*cos(2d+0*pi*Omega*(t+1d+0/4d+0))/sqrt(1d+0-sin(2d+0*pi*Omega*(t+1/4d+0))**2d+0)
      do i = 2,nx
         v(i,nx+1) = v_w
         rho_v(i,nx+1) = v(i,nx+1)*rho(i,nx+1)
         Et(i,nx+1) = P(i,nx+1)/(gamma-1d+0) + rho(i,nx+1) * 0.5d+0 * v(i,nx+1)**2d+0
      end do
-    
+     ! Grid BC
      do i = 2,nx
         v_hat(i) = v_w*(i-1)/dble(nx)
      end do
      
 
   case('sinusoid')
-     !print *, 'is'
+     ! Full Cycle BC
      v_w = pi*Omega*(L2-L1)*sin(2d+0*pi*Omega*t)
      do i = 2,nx
         v(i,nx+1) = v_w
         rho_v(i,nx+1) = v(i,nx+1)*rho(i,nx+1)
         Et(i,nx+1) = P(i,nx+1)/(gamma-1d+0) + rho(i,nx+1) * 0.5d+0 * v(i,nx+1)**2d+0
      end do
-     !print *, 'the'
      do i = 2,nx
-        !print *, 'problem'
         v_hat(i) = v_w*(i-1d+0)/dble(nx)
-        !print *, 'man'
      end do
 
   end select
@@ -531,10 +528,11 @@ subroutine grid_adv
   integer :: i
   doubleprecision :: y_w
   
+  ! Tracks grid for given case to create images later
   select case (pistvel)
   case('constant')
      do i = 1,nx+1
-        y_w = (L1-L2)/pi*asin(sin(2d+0*pi*Omega*(t+0.25d+0))) + (L2+1d+0)/2d+0
+        y_w =  1d+0 + 2d+0*(L2-L1)*t !(L2+1d+0)/2d+0 !+ (L1-L2)/pi*asin(sin(2d+0*pi*Omega*(t+0.25d+0)))
         y(i) = y_w*1.0d+0*(i-1)/ dble(nx)
      end do
   case('sinusoid')
@@ -558,7 +556,10 @@ subroutine dumpdata
   use parameters
   implicit none
 
-  integer :: i,j,iunit=8
+  integer :: i,j,iunit=8,junit=9
+  double precision :: mass
+
+  mass = 0d+0
 
   open(iunit, file=trim(outfile),position='APPEND')
   write(iunit,*) 'time', t, 'nondimensional ', 'a ', 'b ', 'c'
@@ -570,6 +571,37 @@ subroutine dumpdata
      end do
   end do
   close(iunit)
+
+  ! Mass conservation
+  do i=2,nx
+     do j=2,nx
+        mass = mass + rho(i,j)*dx*dy*nx**2
+     end do
+  end do
+  do i=2,nx
+     mass = mass + 0.5d+0*rho(1,i)*dx*dy*nx**2
+  end do
+  do i=2,nx
+     mass = mass + 0.5d+0*rho(nx+1,i)*dx*dy*nx**2
+  end do
+  do i=2,nx
+     mass = mass + 0.5d+0*rho(i,1)*dx*dy*nx**2
+  end do
+  do i=2,nx
+     mass = mass + 0.5d+0*rho(i,nx+1)*dx*dy*nx**2
+  end do
+  mass = mass + 0.25d+0*rho(1,nx+1)*dx*dy*nx**2
+  mass = mass + 0.25d+0*rho(nx+1,nx+1)*dx*dy*nx**2
+  mass = mass + 0.25d+0*rho(1,1)*dx*dy*nx**2
+  mass = mass + 0.25d+0*rho(nx+1,1)*dx*dy*nx**2
+  
+
+  open(junit, file=trim('mass'),position='APPEND')
+  !write(junit,*) 'time', 'mass'
+  write(junit,"(E20.10$)") t, mass
+  write(junit,*) ''
+  close(junit)
+
   
 end subroutine dumpdata
 

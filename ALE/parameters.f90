@@ -7,7 +7,7 @@ double precision :: dt = 0.5d-3
 double precision :: tend = 100d+0
 double precision :: dumpinterval = 1d+0
 double precision :: dx,dy
-double precision :: Omega, R, gamma, lambda, L1, L2
+double precision :: Omega, R, gamma, lambda, visc, L1, L2
 double precision :: pi
 character(20) :: filename
 character(75) :: outfile
@@ -48,6 +48,7 @@ read(iunit, *) Omega
 read(iunit, *) R
 read(iunit, *) lambda
 read(iunit, *) gamma
+read(iunit, *) visc
 read(iunit, *) L1
 read(iunit, *) L2
 read(iunit, *)
@@ -73,6 +74,7 @@ print *, 'Omega', Omega
 print *, 'R', R
 print *, 'lambda', lambda
 print *, 'gamma', gamma
+print *, 'viscosity', visc
 print *, 'L1', L1
 print *, 'L2', L2
 
@@ -91,7 +93,6 @@ pi = 4*atan(1d+0)
 dx = 1d+0 / dble(nx)
 dy = L1 / dble(nx)
 
-print *, 'where'
 
 end subroutine read_params
 

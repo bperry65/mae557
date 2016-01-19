@@ -1,26 +1,18 @@
 import numpy as np
-files = ['test_compressible_nx40_dt1.02E-04_tend2.05E-02',
-         'test_compressible_nx40_dt5.12E-05_tend2.05E-02',
-         'test_compressible_nx40_dt2.56E-05_tend2.05E-02',
-         'test_compressible_nx40_dt1.28E-05_tend2.05E-02',
-         'test_compressible_nx40_dt6.40E-06_tend2.05E-02',
-         'test_compressible_nx40_dt3.20E-06_tend2.05E-02',
-         'test_compressible_nx40_dt1.60E-06_tend2.05E-02',
-         'test_compressible_nx40_dt8.00E-07_tend2.05E-02',
-         'test_compressible_nx40_dt4.00E-07_tend2.05E-02',
-         'test_compressible_nx40_dt2.00E-07_tend2.05E-02',
-         'test_compressible_nx40_dt1.00E-07_tend2.05E-02']
-steps = ( 1.024e-4,
-          0.512e-4,
-          0.256e-4,
-          0.128e-4,
-          0.064e-4,
-          0.032e-4,
-          0.016e-4,
-          0.008e-4,
-          0.004e-4,
-          0.002e-4,
-          0.001e-4)
+files = ['test_centered_nx40_dt1.60E-06_tend2.00E-01',
+         'test_centered_nx40_dt8.00E-07_tend2.00E-01',
+         'test_centered_nx40_dt4.00E-07_tend2.00E-01',
+         'test_centered_nx40_dt2.00E-07_tend2.00E-01',
+         'test_centered_nx40_dt1.00E-07_tend2.00E-01',
+         'test_centered_nx40_dt5.00E-08_tend2.00E-01',
+         'test_centered_nx40_dt2.50E-08_tend2.00E-01']
+steps = ( 0.01600e-4,
+          0.00800e-4,
+          0.00400e-4,
+          0.00200e-4,
+          0.00100e-4,
+          0.00050e-4,
+          0.00025e-4)
 
 nofiles = len(files)
 
@@ -32,9 +24,14 @@ for i in range(0,nofiles):
     
 nx = len(x[nofiles-1])
 
-for i in range(0,nofiles-1):
-    for j in range(0,nx):
-        error[i] = error[i] + abs(x[i][j,1] - x[i+1][j,1])
+
+for i in range(0,nofiles-1): #nofiles-
+#    print x[i]
+#    for j in range(0,nx):
+    j = 237
+    error[i] = error[i] + abs(x[i][j,1] - x[i+1][j,1])
+#    print abs(x[i][j,1] - x[i+1][j,1])
+#    print error[i]
 error = error/nx
 logerror = np.log(error)
 logsteps = np.log(steps[0:nofiles-1])
