@@ -1,0 +1,268 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% University/School Laboratory Report
+% LaTeX Template
+% Version 3.1 (25/3/14)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Linux and Unix Users Group at Virginia Tech Wiki 
+% (https://vtluug.org/wiki/Example_LaTeX_chem_lab_report)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass{article}
+
+%\usepackage[version=3]{mhchem} % Package for chemical equation typesetting
+%\usepackage{siunitx} % Provides the \SI{}{} and \si{} command for typesetting SI units
+\usepackage{graphicx} % Required for the inclusion of images
+\usepackage{natbib} % Required to change bibliography style to APA
+\usepackage{amsmath} % Required for some math elements 
+\usepackage{amssymb}
+\usepackage{color}
+\usepackage[margin=1in]{geometry}
+
+\def\deriv#1#2{\frac{d #1}{d #2}}
+\def\pp#1#2{\frac{\partial #1}{\partial #2}}
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+\renewcommand{\labelenumi}{\alph{enumi}.} % Make numbering in the enumerate environment by letter rather than number (e.g. section 6)
+
+%\usepackage{times} % Uncomment to use the Times New Roman font
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{Simulation of Moving Boundaries: Immersed Boundary and Arbitrary Lagrangian-Eulerian Methods} % Title
+
+\author{A. Cody \textsc{Nunno} and Bruce A. \textsc{Perry}} % Author name
+
+\date{\today} % Date for the report
+
+\begin{document}
+
+\maketitle % Insert the title, author and date
+
+
+% If you wish to include an abstract, uncomment the lines below
+\begin{abstract}
+  In the field of computational fluid dynamics (CFD), most algorithms are developed for use in reference frames where the system boundaries are stationary.  Often, however, moving geometries, such as that of a cylindrical piston, must be considered in order to make predictions regarding real systems.  With that in mind, a set of numerical experiments will be performed on a 2D piston geometry with an advancing, receding, or reciprocating boundary.  To address the changing computational domain, two meshing methods will be implemented and compared: the Arbitrary Lagrangian-Eulerian (ALE) method and the Immersed Boundary (IB) method.  ALE uses a moving grid to maintain accuracy and resolution as the geometry of a system changes.  The IB method uses a stationary mesh but requires the addition of a source term to the governing equations to enforce the boundary conditions when the boundary does not align with the mesh. The advantages and disadvantages of the two methods with regards to simplicity, cost, stability, and accuracy will be compared.
+\end{abstract}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 1
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+
+Moving boundaries are often an unavoidable challenge in examining real problems in fluid mechanics.  While for many applications of fluid dynamics involve problems with consistent or stationary boundaries, such as boundary layers or pipe flow, still others require movement of the domain boundaries. In particular, when there is relative motion between different parts of the boundary of the fluid domain, it is impossible to adopt a reference frame where all boundaries are stationary. This will be the case whenever the size or shape of the domain changes in time.  Modern airplane wings shift the shape of the wing to have more advantageous properties for takeoff, flight, or landing, which necessitates a change in boundary conditions for the flow around the craft.  In an internal combustion engine, the pistons move up and down, changing the size and shape of the volume of interest. Other types of flows which involve moving boundaries include flow through blood vessels, wind turbine and propeller flows, and free surface flows. \\
+
+The scenarios described above are very difficult to simulate using CFD with conventional boundary conditions.  To this end, other methods have been developed to provide the capability to simulate the fluid flow in these cases. In particular, two methods that have been widely utilized are the Arbitrary Lagrangian-Eulerian (ALE) method and the Immersed Boundary (IB) method. In the former method, a moving grid which adjusts to deforming boundaries of the domain is used. In the latter, a stationary grid is used but additional forcing terms must be added to the equations near the boundaries to account for the boundary movement. In this work, the background and mathematical formulations for these two methods are discussed, then the implmentation of each method into a Fortran compressible solver is described. The two methods are applied to the canonical 2D piston problem. This geometry has practical significance as a simplified reprsentation of a cylinder of an internal combusion engine.  \color{red}{[Include references to seminal papers and/or major review paper for each method]} \color{black}
+
+
+ 
+%----------------------------------------------------------------------------------------
+%	SECTION 2
+%----------------------------------------------------------------------------------------
+
+\section{Background}
+
+\subsection{ALE}
+
+The first method to be discussed in this work is the Arbitrary Lagrangian-Eulerian, or ALE, method, which uses a moving grid to accomplish the change in the control volume of interest.  In most fluid dynamics textbooks, fluids are typically examined in two different frames: Eulerian, which examines the flow by focusing on a fixed space as fluid passes through, and Lagrangian, which follows the flow through space as it moves.  Typically, CFD solves its given problem on an Eulerian grid; this simplifies the method of solution by maintaining a consistent grid, since, especially in flows which are turbulent, or would otherwise require a grid with irregular remeshing.  These two frames are typically related to one another through the material derivative, given by:
+\begin{equation}
+  \frac{DF}{Dt} = \deriv{F}{t} + u \cdot \nabla F
+\end{equation}
+where F is merely some function in the domain.  This allows us to relate any quantity in the Eulerian frame with a kinematical description linked to the moving particle.  
+
+A similar technique can be applied to a moving grid.  There is no particular reason that the moving frame must be attached to the particle, except that it is a useful descriptor.  In a CFD simulation, the grid is also a convenient frame; however, the grid is typically also unmoving.  In ALE, there is propagation of the grid according to the boundary conditions of the problem, which gives meaning to the idea of tracking the grid.  In this frame, we can define a velocity which is relative to the grid:
+\begin{equation}
+  c = u - \hat{u}
+\end{equation}
+where $\hat{u}$ is the propagation velocity of the grid.  This term, along with the same logic which lead us to the material derivative, allows us to write an expression for the material derivative using quantities in the grid reference frame:
+\begin{equation}
+  \frac{DF}{Dt} = \frac{\eth F}{\eth t} + c \cdot \nabla F
+\end{equation}
+where $\frac{\eth F}{\eth t}$ is the derivative in the frame of the grid.  It is essentially the same, but now the material derivative is taken in the frame of the moving grid.  This substitution is required in the equations of motion for the Eulerian $\deriv{F}{t}$ so as to avoid needing to perform inaccurate operations to advance the simulation in time.  In our three governing equations:
+\begin{equation}
+  \frac{\eth \rho}{\eth t} + c_j \pp{\rho}{x_j} + \rho \pp{u_j}{x_j}
+\end{equation}
+\begin{equation}
+  \frac{\eth \rho u_i}{\eth t} + c_j \pp{\rho u_i}{x_j} + (\rho u_i)\pp{u_j}{x_j} = - \pp{p}{x_i} + \pp{\tau_{ij}}{x_j}
+\end{equation}
+\begin{equation}
+  \frac{\eth \rho e_t}{\eth t} + c_j \pp{\rho e_t}{x_j} + (\rho e_t)\pp{u_j}{x_j} = - \pp{p u_j}{x_j} + \pp{\tau_{ij} u_j}{x_j}  - \pp{q_j}{x_j}
+\end{equation}
+
+ALE is a very popular method for fluid dynamics simulations which involve a shifting grid, especially those which involve fluid structure interactions.  
+
+\subsection{Immersed Boundary}
+
+Immersed boundary methods refer to any of a class of methods in which a stationary, regular (usually cartesian) grid is overlaid on a domain with moving or irregularly shaped boundaries. hile IB-like methods \cite{scardovelli1999direct} can be applied to fluid-fluids interfaces, because the case to be studied here involves a moving solid wall, the immersed boundaries will subsequently be assumed to be solid walls for simplcity. These methods were originally developed to study flow in complex but stationary geometries, and the first application was to the study of flow through a heart valve by Peskin in 1972.\cite{peskin1972} The key distinguishing feature of an IB method is that the solid boundary does not exactly coincide with the grid locations of the flow variables. It can be seen that for the case of a continuously moving boundary and a stationary grid, the boundary location must not always coincide with the grid points, and therefore IB methods are relevant. In general, the main advantage of this approach, whether for complex geometries, moving geometries, or both, is that a cartesian grid and straightforward numerical methods, such as finite difference approaches, can be used. The disadvantage is that because the boundaries and grid are not aligned, the effects of the boundaries on the flow must be modeled rather than being directly accounted for. This is illustrated in Figure \ref{fig:ibpic}. \\
+
+\begin{figure}
+  \centering
+ %\begin{overpic}
+    \includegraphics[width = 2in]{ibpic}
+    \put (2,98) {$\Gamma_b$}
+    \put (-125,114) {$\Omega_f$}
+    \put (-56,39) {$\Omega_b$}
+  %\end{overpic}
+  \caption{\label{fig:ibpic} Schematic of a curved boundary ($\Gamma_b$) with a structure grid overlaid. The fluid ($\Omega_f$) and solid ($\Omega_b$) domains are labeled. Adapted from \cite{scardovelli1999direct} }
+\end{figure}
+
+There are two main approaches to implementation of the immersed boundary method, continuous and discrete forcing, which differ in the way that a forcing term is added to account for the boundary \cite{mittal2005}. In general, the governing equations for a fluid mechanics simulation can be expressed as
+\begin{equation}
+\mathcal{L}(\bar{U}) = 0 \hspace{12pt} \rm{in} \hspace{12pt}  \Omega_f,
+\end{equation}
+with boundary conditions
+\begin{equation}
+\bar{U} = \bar{U}_\Gamma \hspace{12pt} \rm{on} \hspace{12pt}  \Gamma_b,
+\end{equation}
+where $\bar{U}$ is a vector of the flow variables (velocities, density, pressure, and temperature/internal energy) and $\mathcal{L}$ is an operator defined by the continuity, momentum, and energy equations. In the continuous forcing approach, a smooth forcing function ($\bar{f}_b$ is added to the continuous equations, which must be considered on the full domain because the forcing function is smooth and has nonzero values within the fluid and solid near the boundary:
+\begin{equation}
+\mathcal{L}(\bar{U}) = \bar{f}_b \hspace{12pt} \rm{in} \hspace{12pt}  \Omega_f + \Omega_b.
+\end{equation}
+The disadvantage of this approach is that a diffuse forcing function is required to ensure that the effect of the boundary is felt at the nearby grid cells, but this corresponds to a \lq fuzzy\rq\ boundary. In contrast, the discrete forcing approach involves first discretizing the governing equations, then adding a forcing term only at the boundary, resulting in the modified set of equations:
+\begin{equation}
+\mathcal{L}_d(\bar{U}) = 0 \hspace{12pt} \rm{in} \hspace{12pt}  \Omega_f.
+\end{equation}
+\begin{equation}
+\mathcal{L}'_d(\bar{U}) = \bar{r} \hspace{12pt} \rm{near} \hspace{12pt}  \Gamma_b.
+\end{equation}
+where $\mathcal{L}_d$ is the discretized operator, $\mathcal{L}'_d$ is the modified operator that applies near the boundaries, and $\bar{r}$ is a vector of effective forcing terms based on the known conditions at the boundary. Because forcing is added after discretization, it is possible to obtain an effectively sharp fluid-solid interface.\\
+
+Because the system to be examined involves sharp fluid-solid boundaries, the discrete forcing approach is used in this work. Based on the discussion above, the use of the immersed boundary method does not affect the solution procedure away from the boundaries for finite difference discretizations. However, near the boundaries the modified discretized spatial operator will need to account for two types of nodes differently: ghost nodes and freshly cleared nodes. As illustrated in Figure \ref{fig:ghost}, ghost nodes are nodes that lie within the solid domain but are adjacent to one or more nodes in the fluid domain. Values of flow variables at these nodes must be specified in order to use finite difference methods to calculate derivatives at the adjacent nodes within the fluid domain. The values are specified such that interpolation between the ghost node (G) and the adjacent fluid nodes (F1,F2,F3) to the point B on the boundary results in a value that satisfies the boundary condition at B, which is the normal intercept from the ghost node to the immersed boundary. This interpolation can be expressed as:
+\begin{equation}
+\phi_B = \omega_G \phi_G + \omega_{F1} \phi_{F1} + \omega_{F2} \phi_{F2}  + \omega_{F3} \phi_{F3}
+\end{equation}
+and therefore
+\begin{equation}
+\phi_G = \frac{\phi_B - \omega_{F1} \phi_{F1} - \omega_{F2} \phi_{F2}  - \omega_{F3} \phi_{F3}}{\omega_G}.
+\end{equation}
+where $\omega_i$ are geometry-dependent interpolation weightings and $\phi$ is any flow variable.
+The freshly cleared nodes are nodes which were within the solid boundary at timestep $n-1$ but at timestep $n$ are now in the fluid domain due to the movement of the boundary. The values of flow variables at these nodes are not defined at timestep $n$ and must be determined by interpolation between the adjacent fluid nodes and the boundary.
+
+
+\begin{figure}
+  \centering
+    \includegraphics[width = 2in]{ghost}
+  \caption{\label{fig:ghost} Schematic for finite difference spatial discretization with a moving immersed boundary, showing nodes in the fluid domain (black), nodes in the solid domain (green), ghost nodes (blue), and freshly cleared nodes (red). }
+\end{figure}
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 3
+%----------------------------------------------------------------------------------------
+
+\section{Method of Solution}
+
+\subsection{ALE}
+
+Solving the ALE equations necessitated a compressible flow solver, as the particular problem considered in this work involves significant compression.  Additionally, the implementation in the compressible flow solver was found to be somewhat easier.  To solve these equations, a simple set of finite difference equations have been implemented.  The time integration is done using explicit Euler, and the derivatives of quantities are found using second order central difference from cell corner to corner.  The only exception is the fluxes, which are taken and stored at the midpoints of the cell sides, which is done to ensure that when the derivative of these fluxes are taken, it resembles a second order central difference.  To illustrate, the continuity, momentum, and energy equations, as discretized, are repeated below:
+\begin{equation}
+  \frac{\rho^{n+1}_{i,j} - \rho^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{\rho^{n}_{i+1,j}-\rho^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{\rho^{n}_{i,j+1}-\rho^{n}_{i,j-1}}{2\Delta y} + \rho^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{u^{n}_{i,j+1}-u^{n}_{i,j-1}}{2\Delta y}\right)
+\end{equation}
+\begin{equation}
+  \frac{(\rho u)^{n+1}_{i,j} - (\rho u)^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{(\rho u)^{n}_{i+1,j}-(\rho u)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{(\rho u)^{n}_{i,j+1}-(\rho u)^{n}_{i,j-1}}{2\Delta y} + (\rho u)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i+1,j} - p^{n}_{i-1,j}}{2\Delta x} + \frac{(\tau_{xx})^{n}_{i+1/2,j} - (\tau_{xx})^{n}_{i-1/2,j}}{\Delta x} + \frac{(\tau_{yx})^{n}_{i,j+1/2} - (\tau_{yx})^{n}_{i,j-1/2}}{\Delta y}
+\end{equation}
+\begin{equation}
+  \frac{(\rho v)^{n+1}_{i,j} - (\rho v)^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{(\rho v)^{n}_{i+1,j}-(\rho v)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{(\rho v)^{n}_{i,j+1}-(\rho v)^{n}_{i,j-1}}{2\Delta y} + (\rho v)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i,j+1} - p^{n}_{i,j-1}}{2\Delta y} + \frac{(\tau_{xy})^{n}_{i+1/2,j} - (\tau_{xy})^{n}_{i-1/2,j}}{\Delta x} + \frac{(\tau_{yy})^{n}_{i,j+1/2} - (\tau_{yy})^{n}_{i,j-1/2}}{\Delta y}
+\end{equation}
+\begin{equation}
+  \frac{(\rho e_t)^{n+1}_{i,j} - (\rho e_t)^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{(\rho e_t)^{n}_{i+1,j}-(\rho e_t)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j}\frac{(\rho e_t)^{n}_{i,j+1}-(\rho e_t)^{n}_{i,j-1}}{2\Delta y} + (\rho e_t)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i+1,j}u^{n}_{i+1,j} - p^{n}_{i-1,j} u^{n}_{i-1,j}}{2\Delta x} - \frac{p^{n}_{i,j+1} v^{n}_{i,j-1} - p^{n}_{i,j-1} v^{n}_{i,j-1}}{2\Delta y} + \frac{u^{n}_{i+1/2,j}(\tau_{xx})^{n}_{i+1/2,j} - u^{n}_{i-1/2,j} (\tau_{xx})^{n}_{i-1/2,j}}{\Delta x} + \frac{v^{n}_{i,j+1/2} (\tau_{yx})^{n}_{i,j+1/2} - v^{n}_{i,j-1/2} (\tau_{yx})^{n}_{i,j-1/2}}{\Delta y} + \frac{u^{n}_{i+1/2,j} (\tau_{xy})^{n}_{i+1/2,j} - u^{n}_{i-1/2,j}(\tau_{xy})^{n}_{i-1/2,j}}{\Delta x} + \frac{v^{n}_{i,j+1/2} (\tau_{yy})^{n}_{i,j+1/2} - v^{n}_{i,j-1/2} (\tau_{yy})^{n}_{i,j-1/2}}{\Delta y} - \frac{(q_x)^{n}_{i+1/2,j} - (q_x)^{n}_{i-1/2,j}}{\Delta x} - \frac{(q_y)^{n}_{i+1/2,j} - (q_y)^{n}_{i-1/2,j}}{\Delta y}
+\end{equation}
+Here, $q$ is the heat flux in the given direction from the cell, and $\tau$ is the shear stress of the cell along the appropriate face.  The fluxes of density weighted quantities, $\rho$, $\rho u$, $\rho v$, and $\rho e_t$, can be found using these equations.  Other variables, such as $p$ and $T$, can be found using the definition of energy, or the ideal gas equation:
+\begin{equation}
+  \rho e_t = \frac{1}{\gamma -1} p + \frac{1}{2} \rho (u^2 + v^2)
+\end{equation}
+\begin{equation}
+  p = \rho R T
+\end{equation}
+The primary difference between this implementation and the implementation used on project two and elsewhere in this project is that the equations are dimensional so as to make the introduction of the grid velocity conceptually simpler.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{timeconv.eps}         
+    \caption{Time convergence for ALE.}
+    \label{fig:timeconv}
+  \end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{spaceconv.eps}         
+    \caption{Spatial convergence for ALE.}
+    \label{fig:spaceconv}
+  \end{figure}
+As we are continuing to use second order central difference and explicit Euler, convergence should be second order in space and first order in time. (INSERT CONVERGENCE HERE)  The anticipated time convergence is achieved, as can be seen in Figure~\ref{fig:timeconv}.
+Because of the shrinking and expanding grid size, it is impossible to get an exact timestep restriction for ALE.  However, using some analogous analysis to fixed grids, we find the stability criterion to be:
+\begin{equation}
+  a = b
+\end{equation}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.7\textwidth]{masscons.eps}         
+    \caption{Mass conservation for ALE.}
+    \label{fig:masscons}
+  \end{figure}
+The conservation properties of the ALE solver change fairly significantly over the original solver from the previous project.  This change is necessary, as the change of reference frame requires the separation of the divergence into two components.  It alters the symmetry of the momentum governing equations' summations, which means that they no longer sum to zero over the entire domain.  However, because of the particular problem configuration addressed in this work, neither momentum nor energy conservation can be verified.  Since a moving piston boundary is being considered, work is being done either on or by the system; therefore, the energy and momentum of the system are being directly affected.  We can, however, still establish mass conservation, by summing the densities multiplied by the volume of each cell and the number of cells.  This information is tracked in Figure~\ref{fig:masscons}.  It is evident from the image that mass is not quite fully conserved, though the variation is minimal over a full cycle, less than 1\% of the total.  
+
+\subsection{Immersed Boundary}
+
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 4
+%----------------------------------------------------------------------------------------
+
+\section{Application: The Moving Piston}
+
+The great advantage of using both of these methods is their ability to handle moving objects within the flow, or objects which move the flow.  To that end, the test of these methods will be an application which is common in the field of fluid dynamics: the flow incuded by a moving piston.  The problem is two dimensional, with a fixed width in x, both dimensionally and non-dimensionally unity, and an advancing and withdrawing piston under two sets of velocity conditions.  In one condition, the piston will be examined with a constant velocity, given by the function:
+\begin{equation}
+  v_w = 2 (L1-L2) \omega
+\end{equation}
+where $\omega$ is the frequency of oscillation in cycles per second, though this condition is not truly oscillatory.  This yields a constant velocity withdrawal or expansion based on an initial and final position of the expansion or compression, L1 and L2, respectively.  These conditions do not experience a full cycle, as the high jerk movement of a sudden and rapid shift in speed is neither particularly realistic nor particularly stable.  In the other condition, the velocity is sinusoidal, given by the equation:
+\begin{equation}
+  v_w = \pi \omega (L2-L1) \sin{2 \pi \omega t}
+\end{equation}
+These two conditions are matched such that the frequency of oscillation is the same between them, and the resulting cycles should match pace, although not speed.  
+
+To compare between the two different methods presented, some non-dimensional parameters need to be established to maintain commonality in testing.  The piston
+
+\subsection{ALE}
+
+
+
+\subsection{Immersed Boundary}
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 5
+%----------------------------------------------------------------------------------------
+
+\section{Conclusions}
+
+
+
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\bibliographystyle{apalike}
+
+\bibliography{finproj}
+
+%----------------------------------------------------------------------------------------
+
+
+\end{document}
