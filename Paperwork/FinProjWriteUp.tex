@@ -84,7 +84,7 @@ A similar technique can be applied to a moving grid.  There is no particular rea
 \begin{equation}
   c = u - \hat{u}
 \end{equation}
-where $\hat{u}$ is the propagation velocity of the grid.  This term, along with the same logic which lead us to the material derivative, allows us to write an expression for the material derivative using quantities in the grid reference frame:
+where $\hat{u}$ is the propagation velocity of the grid.  This term, along with the same logic which lead us to the material derivative, allows us to write an expression for the material derivative using quantities in the grid reference frame~\cite{sarrate01}:
 \begin{equation}
   \frac{DF}{Dt} = \frac{\eth F}{\eth t} + c \cdot \nabla F
 \end{equation}
@@ -99,7 +99,9 @@ where $\frac{\eth F}{\eth t}$ is the derivative in the frame of the grid.  It is
   \frac{\eth \rho e_t}{\eth t} + c_j \pp{\rho e_t}{x_j} + (\rho e_t)\pp{u_j}{x_j} = - \pp{p u_j}{x_j} + \pp{\tau_{ij} u_j}{x_j}  - \pp{q_j}{x_j}
 \end{equation}
 
-ALE is a very popular method for fluid dynamics simulations which involve a shifting grid, especially those which involve fluid structure interactions.  
+ALE is a very popular method for fluid dynamics simulations which involve a shifting grid, especially those which involve fluid interfaces.  Fluid structure interactions are a primary use for the ALE method.  Schemes similar to ALE, though not necessarily called such, have been in use for fluid structure interactions since the 1960's~\cite{noh63,trulio66}, but the first implementation of a method called Arbitrary Lagrangian-Eulerian was introduced specifically for problems with flexible boundaries, such as a heart valve~\cite{hirt74}.  In many of the papers regarding fluid-solid interactions, the finite element technique has been used~\cite{hron06,letallec01,souli00}, presumably due to the frequent simulation of the solid in addition to the fluid, where the finite element technique is more appropriate than others.  Common configurations in such cases include channel flow with moving walls, such as one might see in a biological flow~\cite{hron06}, or flow over a body, deformable or otherwise~\cite{farhat05}.  Boundary conditions for fluid-solid interfaces are usually typical no-slip surfaces, where the displacement and velocity of the interface are the same, with one slight addition.  The simulation of the body and fluid requires some knowledge about their interface and the momentum transfer between them; therefore, we require that the stress across the boundary also be the same to enforce the boundary conditions.
+
+Another problem of interest in ALE is free surface flows.  These types of problems are largely between a liquid and a gas, applied to wave propagation problems~\cite{braess00,lo04,nithiarasu05}.  The interface between the two fluids can be represented through the same techniques as the solid-fluid interaction.  In most cases, a finite element program is still used to solve the discretized equations.  The most challenging element unique to a free surface problem is obviously the propagation of the free surface wave front.  To solve this problem, one of two approaches is usually followed.  In the 
 
 \subsection{Immersed Boundary}
 
