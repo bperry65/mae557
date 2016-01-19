@@ -11,7 +11,7 @@ files = ['test_central_nx40_dt2.05E-04_tend2.05E-02',
          'test_central_nx40_dt4.00E-07_tend2.05E-02',
          'test_central_nx40_dt2.00E-07_tend2.05E-02',
          'test_central_nx40_dt1.00E-07_tend2.05E-02']
-steps = ( 1.024e-4,
+steps = ( 2.048e-4,
           1.024e-4,
           0.512e-4,
           0.256e-4,
@@ -27,21 +27,30 @@ steps = ( 1.024e-4,
 nofiles = len(files)
 
 x = [0] * nofiles
-error = np.zeros(nofiles-1)
+error_p = np.zeros(nofiles-1)
+error_u = np.zeros(nofiles-1)
+error_v = np.zeros(nofiles-1)
+error_T = np.zeros(nofiles-1)
 
 for i in range(0,nofiles):
-    x[i] = np.genfromtxt(files[i],skip_header=4,usecols=(1,3))
+    x[i] = np.genfromtxt(files[i],skip_header=4,usecols=(0,1,2,3))
     
 nx = len(x[nofiles-1])
 
 for i in range(0,nofiles-1):
     for j in range(0,nx):
-        error[i] = error[i] + abs(x[i][j,1] - x[i+1][j,1])
-error = error/nx
-logerror = np.log(error)
-logsteps = np.log(steps[0:nofiles-1])
+        error_p[i] = error_p[i] + abs(x[i][j,0] - x[i+1][j,0])
+        error_u[i] = error_u[i] + abs(x[i][j,1] - x[i+1][j,1])
+        error_v[i] = error_v[i] + abs(x[i][j,2] - x[i+1][j,2])
+        error_T[i] = error_T[i] + abs(x[i][j,3] - x[i+1][j,3])
+
+error_p = error_p/nx
+error_u = error_u/nx
+error_v = error_v/nx
+error_T = error_T/nx
+
 for i in range(0,nofiles-1):
-    print steps[i],error[i]
+    print steps[i], error_p[i], error_u[i], error_v[i], error_T[i]
 
 #for i in range(0,nofiles-1):
 #    print logsteps[i],logerror[i]
