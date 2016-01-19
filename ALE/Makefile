@@ -1,8 +1,9 @@
-FC = ifort
+FC = f90
+#FC = gfort
 #FCFLAGS = -g -fbounds-check 
 FCFLAGS = -O3
 #FCFLAGS += -I/
-LIBS = -L/opt/lapack/lib -llapack -lblas -mkl
+#LIBS = -L/opt/lapack/lib -llapack -lblas -mkl
 
 PROGRAMS = solver
 
