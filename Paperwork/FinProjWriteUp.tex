@@ -32,7 +32,8 @@
 \def\deriv#1#2{\frac{d #1}{d #2}}
 \def\pp#1#2{\frac{\partial #1}{\partial #2}}
 
-\setlength\parindent{0pt} % Removes all indentation from paragraphs
+\usepackage{parskip}
+\setlength\parindent{45pt} % Removes all indentation from paragraphs
 
 \renewcommand{\labelenumi}{\alph{enumi}.} % Make numbering in the enumerate environment by letter rather than number (e.g. section 6)
 
@@ -80,7 +81,7 @@ The first method to be discussed in this work is the Arbitrary Lagrangian-Euleri
   \frac{DF}{Dt} = \deriv{F}{t} + u \cdot \nabla F
 \end{equation}
 where F is merely some function in the domain.  This allows us to relate any quantity in the Eulerian frame with a kinematical description linked to the moving particle.  
-
+\\
 A similar technique can be applied to a moving grid.  There is no particular reason that the moving frame must be attached to the particle, except that it is a useful descriptor.  In a CFD simulation, the grid is also a convenient frame; however, the grid is typically also unmoving.  In ALE, there is propagation of the grid according to the boundary conditions of the problem, which gives meaning to the idea of tracking the grid.  In this frame, we can define a velocity which is relative to the grid:
 \begin{equation}
   c = u - \hat{u}
@@ -99,17 +100,17 @@ where $\frac{\eth F}{\eth t}$ is the derivative in the frame of the grid.  It is
 \begin{equation}
   \frac{\eth \rho e_t}{\eth t} + c_j \pp{\rho e_t}{x_j} + (\rho e_t)\pp{u_j}{x_j} = - \pp{p u_j}{x_j} + \pp{\tau_{ij} u_j}{x_j}  - \pp{q_j}{x_j}
 \end{equation}
-
+\\
 ALE is a very popular method for fluid dynamics simulations which involve a shifting grid, especially those which involve fluid interfaces.  Fluid structure interactions are a primary use for the ALE method.  Schemes similar to ALE, though not necessarily called such, have been in use for fluid structure interactions since the 1960's~\cite{noh63,trulio66}, but the first implementation of a method called Arbitrary Lagrangian-Eulerian was introduced specifically for problems with flexible boundaries, such as a heart valve~\cite{hirt74}.  In many of the papers regarding fluid-solid interactions, the finite element technique has been used~\cite{hron06,letallec01,souli00}, presumably due to the frequent simulation of the solid in addition to the fluid, where the finite element technique is more appropriate than others.  Common configurations in such cases include channel flow with moving walls, such as one might see in a biological flow~\cite{hron06}, or flow over a body, deformable or otherwise~\cite{farhat05}.  Boundary conditions for fluid-solid interfaces are usually typical no-slip surfaces, where the displacement and velocity of the interface are the same, with one slight addition.  The simulation of the body and fluid requires some knowledge about their interface and the momentum transfer between them; therefore, we require that the stress across the boundary also be the same to enforce the boundary conditions.
-
+\\
 Another problem of interest in ALE is free surface flows.  These types of problems are largely between a liquid and a gas, applied to wave propagation problems~\cite{braess00,lo04,nithiarasu05}.  The interface between the two fluids can be represented through the same techniques as the solid-fluid interaction.  In most cases, a finite element program is still used to solve the discretized equations.  The most challenging element unique to a free surface problem is obviously the propagation of the free surface wave front.  To solve this problem, one of two approaches is usually followed.  The first requires solving a kinematic equation for the surface, of the form:
 \begin{equation}
   \pp{z}{t} + (v\cdot \nabla)z = 0
 \end{equation}
 The second method merely requires that the velocity across the interface is zero, which allows the surface to propagate as normal~\cite{sarrate01}.
-
+\\
 Perhaps the greatest uncertainty which pertains to the ALE method is the mesh propagation.  If one has a cyclical or otherwise predictable moving boundary, the mesh propagation is fairly simple as it can be decided upon as some function of the boundary movement, but the problem becomes harder is the motion is not known \emph{a priori}.  From there, one must choose whether or not one wishes to retain the same mesh or occasionally remesh.  Maintaining the same mesh, called regularization~\cite{sarrate01}, uses the propagation of the boundary to determine how the boundary moves as well.  The movement of the boundary must be determined, then the mesh movement can be determined through a set of potential-like equations which can be decribed, at least generally, \emph{a priori}.  An adaptive mesh can also be used to describe these more complicated meshes, wherein the mesh seeks to move points towards areas of strong gradient while also simultaneously trying to spread error out evenly across the entire domain~\cite{sarrate01}.  This technique has been used effectively in flows, and is especially useful when anisotropy is important.
-
+\\
 With any method there are both adavantages and disadvantages.  The ALE method's primary usefulness is its ability to study moving grids, which can be the most effective method for certain types of problems.  It has significant advantages over purely Eulerian grids in that it is very easy to track the solid interface boundary, and by moving the mesh separate from the fluid, it can avoid the twisting typically associated with a Lagrangian mesh.  Additionally, the moving grid formulation is particularly applicable for moving objects where the solid is also simulated, as the interfaces can be done using the same moving grid.  However, as always, there are drawbacks.  As stated previously, the grid propagation is not easy to determine without \emph{a priori} knowledge unless remeshing is to be used; the first can result in mesh entangling, but the second is computationally expensive.   As will be discussed in the Implementation section, the form of the equations is inherently non-conservative for momentum, and the stability properties are irregular and hard to determine due to the ever changing grid size~\cite{hirt74}.  Additionally, moving a grid through space without fixed boundaries can result in mass non-conservation if properties are kept at cell centers instead of cell faces~\cite{ferziger12}.  This is more an issue with finite volume methods than the finite differences used in this work, but is worth mentioning.
 
 \subsection{Immersed Boundary}
@@ -125,16 +126,32 @@ With any method there are both adavantages and disadvantages.  The ALE method's 
 
 Solving the ALE equations necessitated a compressible flow solver, as the particular problem considered in this work involves significant compression.  Additionally, the implementation in the compressible flow solver was found to be somewhat easier.  To solve these equations, a simple set of finite difference equations have been implemented.  The time integration is done using explicit Euler, and the derivatives of quantities are found using second order central difference from cell corner to corner.  The only exception is the fluxes, which are taken and stored at the midpoints of the cell sides, which is done to ensure that when the derivative of these fluxes are taken, it resembles a second order central difference.  To illustrate, the continuity, momentum, and energy equations, as discretized, are repeated below:
 \begin{equation}
-  \frac{\rho^{n+1}_{i,j} - \rho^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{\rho^{n}_{i+1,j}-\rho^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{\rho^{n}_{i,j+1}-\rho^{n}_{i,j-1}}{2\Delta y} + \rho^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{u^{n}_{i,j+1}-u^{n}_{i,j-1}}{2\Delta y}\right)
+  \begin{aligned}
+    \frac{\rho^{n+1}_{i,j} - \rho^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{\rho^{n}_{i+1,j}-\rho^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{\rho^{n}_{i,j+1}-\rho^{n}_{i,j-1}}{2\Delta y} + \rho^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{u^{n}_{i,j+1}-u^{n}_{i,j-1}}{2\Delta y}\right)
+  \end{aligned}
 \end{equation}
 \begin{equation}
-  \frac{(\rho u)^{n+1}_{i,j} - (\rho u)^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{(\rho u)^{n}_{i+1,j}-(\rho u)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{(\rho u)^{n}_{i,j+1}-(\rho u)^{n}_{i,j-1}}{2\Delta y} + (\rho u)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i+1,j} - p^{n}_{i-1,j}}{2\Delta x} + \frac{(\tau_{xx})^{n}_{i+1/2,j} - (\tau_{xx})^{n}_{i-1/2,j}}{\Delta x} + \frac{(\tau_{yx})^{n}_{i,j+1/2} - (\tau_{yx})^{n}_{i,j-1/2}}{\Delta y}
+  \begin{aligned}
+    \frac{(\rho u)^{n+1}_{i,j} - (\rho u)^{n}_{i,j}}{\Delta t} &= - u^{n}_{i,j} \frac{(\rho u)^{n}_{i+1,j}-(\rho u)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{(\rho u)^{n}_{i,j+1}-(\rho u)^{n}_{i,j-1}}{2\Delta y} \\
+    &+ (\rho u)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i+1,j} - p^{n}_{i-1,j}}{2\Delta x} \\
+    &+ \frac{(\tau_{xx})^{n}_{i+1/2,j} - (\tau_{xx})^{n}_{i-1/2,j}}{\Delta x} + \frac{(\tau_{yx})^{n}_{i,j+1/2} - (\tau_{yx})^{n}_{i,j-1/2}}{\Delta y}
+  \end{aligned}
 \end{equation}
 \begin{equation}
-  \frac{(\rho v)^{n+1}_{i,j} - (\rho v)^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{(\rho v)^{n}_{i+1,j}-(\rho v)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{(\rho v)^{n}_{i,j+1}-(\rho v)^{n}_{i,j-1}}{2\Delta y} + (\rho v)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i,j+1} - p^{n}_{i,j-1}}{2\Delta y} + \frac{(\tau_{xy})^{n}_{i+1/2,j} - (\tau_{xy})^{n}_{i-1/2,j}}{\Delta x} + \frac{(\tau_{yy})^{n}_{i,j+1/2} - (\tau_{yy})^{n}_{i,j-1/2}}{\Delta y}
+  \begin{aligned}
+    \frac{(\rho v)^{n+1}_{i,j} - (\rho v)^{n}_{i,j}}{\Delta t} &= - u^{n}_{i,j} \frac{(\rho v)^{n}_{i+1,j}-(\rho v)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j} \frac{(\rho v)^{n}_{i,j+1}-(\rho v)^{n}_{i,j-1}}{2\Delta y} \\
+    &+ (\rho v)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i,j+1} - p^{n}_{i,j-1}}{2\Delta y} \\
+    &+ \frac{(\tau_{xy})^{n}_{i+1/2,j} - (\tau_{xy})^{n}_{i-1/2,j}}{\Delta x} + \frac{(\tau_{yy})^{n}_{i,j+1/2} - (\tau_{yy})^{n}_{i,j-1/2}}{\Delta y}
+  \end{aligned}
 \end{equation}
 \begin{equation}
-  \frac{(\rho e_t)^{n+1}_{i,j} - (\rho e_t)^{n}_{i,j}}{\Delta t} = - u^{n}_{i,j} \frac{(\rho e_t)^{n}_{i+1,j}-(\rho e_t)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j}\frac{(\rho e_t)^{n}_{i,j+1}-(\rho e_t)^{n}_{i,j-1}}{2\Delta y} + (\rho e_t)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i+1,j}u^{n}_{i+1,j} - p^{n}_{i-1,j} u^{n}_{i-1,j}}{2\Delta x} - \frac{p^{n}_{i,j+1} v^{n}_{i,j-1} - p^{n}_{i,j-1} v^{n}_{i,j-1}}{2\Delta y} + \frac{u^{n}_{i+1/2,j}(\tau_{xx})^{n}_{i+1/2,j} - u^{n}_{i-1/2,j} (\tau_{xx})^{n}_{i-1/2,j}}{\Delta x} + \frac{v^{n}_{i,j+1/2} (\tau_{yx})^{n}_{i,j+1/2} - v^{n}_{i,j-1/2} (\tau_{yx})^{n}_{i,j-1/2}}{\Delta y} + \frac{u^{n}_{i+1/2,j} (\tau_{xy})^{n}_{i+1/2,j} - u^{n}_{i-1/2,j}(\tau_{xy})^{n}_{i-1/2,j}}{\Delta x} + \frac{v^{n}_{i,j+1/2} (\tau_{yy})^{n}_{i,j+1/2} - v^{n}_{i,j-1/2} (\tau_{yy})^{n}_{i,j-1/2}}{\Delta y} - \frac{(q_x)^{n}_{i+1/2,j} - (q_x)^{n}_{i-1/2,j}}{\Delta x} - \frac{(q_y)^{n}_{i+1/2,j} - (q_y)^{n}_{i-1/2,j}}{\Delta y}
+  \begin{aligned}
+    \frac{(\rho e_t)^{n+1}_{i,j} - (\rho e_t)^{n}_{i,j}}{\Delta t} &= - u^{n}_{i,j} \frac{(\rho e_t)^{n}_{i+1,j}-(\rho e_t)^{n}_{i-1,j}}{2\Delta x} - c^{n}_{i,j}\frac{(\rho e_t)^{n}_{i,j+1}-(\rho e_t)^{n}_{i,j-1}}{2\Delta y} \\
+    &+ (\rho e_t)^{n}_{i,j} \left(\frac{u^{n}_{i+1,j}-u^{n}_{i-1,j}}{2\Delta x} + \frac{v^{n}_{i,j+1}-v^{n}_{i,j-1}}{2\Delta y}\right) - \frac{p^{n}_{i+1,j}u^{n}_{i+1,j} - p^{n}_{i-1,j} u^{n}_{i-1,j}}{2\Delta x} \\
+    &- \frac{p^{n}_{i,j+1} v^{n}_{i,j-1} - p^{n}_{i,j-1} v^{n}_{i,j-1}}{2\Delta y} + \frac{u^{n}_{i+1/2,j}(\tau_{xx})^{n}_{i+1/2,j} - u^{n}_{i-1/2,j} (\tau_{xx})^{n}_{i-1/2,j}}{\Delta x} \\
+    &+ \frac{v^{n}_{i,j+1/2} (\tau_{yx})^{n}_{i,j+1/2} - v^{n}_{i,j-1/2} (\tau_{yx})^{n}_{i,j-1/2}}{\Delta y} + \frac{u^{n}_{i+1/2,j} (\tau_{xy})^{n}_{i+1/2,j} - u^{n}_{i-1/2,j}(\tau_{xy})^{n}_{i-1/2,j}}{\Delta x}  \\
+    &+ \frac{v^{n}_{i,j+1/2} (\tau_{yy})^{n}_{i,j+1/2} - v^{n}_{i,j-1/2} (\tau_{yy})^{n}_{i,j-1/2}}{\Delta y} - \frac{(q_x)^{n}_{i+1/2,j} - (q_x)^{n}_{i-1/2,j}}{\Delta x} - \frac{(q_y)^{n}_{i+1/2,j} - (q_y)^{n}_{i-1/2,j}}{\Delta y}
+  \end{aligned}
 \end{equation}
 Here, $q$ is the heat flux in the given direction from the cell, and $\tau$ is the shear stress of the cell along the appropriate face.  The fluxes of density weighted quantities, $\rho$, $\rho u$, $\rho v$, and $\rho e_t$, can be found using these equations.  Other variables, such as $p$ and $T$, can be found using the definition of energy, or the ideal gas equation:
 \begin{equation}
@@ -144,31 +161,38 @@ Here, $q$ is the heat flux in the given direction from the cell, and $\tau$ is t
   p = \rho R T
 \end{equation}
 The primary difference between this implementation and the implementation used on project two and elsewhere in this project is that the equations are dimensional so as to make the introduction of the grid velocity conceptually simpler.
+
+\section{Verification}
+
+\subsection{ALE}
+
 \begin{figure}
     \centering
-    \includegraphics[width=0.7\textwidth]{timeconv.eps}         
+    \includegraphics[width=0.7\textwidth]{timeconvALE.eps}         
     \caption{Time convergence for ALE.}
-    \label{fig:timeconv}
+    \label{fig:timeconvALE}
   \end{figure}
 \begin{figure}
     \centering
-    \includegraphics[width=0.7\textwidth]{spaceconv.eps}         
+    \includegraphics[width=0.7\textwidth]{spaceconvALE.eps}         
     \caption{Spatial convergence for ALE.}
-    \label{fig:spaceconv}
+    \label{fig:spaceconvALE}
   \end{figure}
-As we are continuing to use second order central difference and explicit Euler, convergence should be second order in space and first order in time. (INSERT CONVERGENCE HERE)  The anticipated time convergence is achieved, as can be seen in Figure~\ref{fig:timeconv}.
+As we are continuing to use second order central difference and explicit Euler, convergence should be second order in space and first order in time.  The anticipated time convergence is achieved, as can be seen in Figure~\ref{fig:timeconvALE}.  However, as seen in Figure~\ref{fig:spaceconvALE}, the accuracy spatially is less certain.  Some properties certainly appear to be second order convergent (the velocities), but the quantities which are not explicitly solved for (pressure and temperature) have convergence which is highly irregular and does not match a discernable pattern.  It could be that there is a bug in the energy equation, or perhaps even it is an effect of the ALE method, although the literature has not suggested the latter conclusion.
+\\
 Because of the shrinking and expanding grid size, it is impossible to get an exact timestep restriction for ALE.  However, Hirt has previously performed analogous linear stability analysis for ALE~\cite{hirt74}, where the stability criterion is found to be:
 \begin{equation}
   \Delta t < \left[ \frac{2(2\mu + \lambda)}{\rho}\left(\frac{1}{\Delta x} + \frac{1}{\Delta y}\right)\right]^{-1}
 \end{equation}
-where $\lambda$ and $\mu$ are the first and second components of viscosity.  Generally, our methods stability seemed to be rather below that, with strange oscillations forming at factors much lower than indicated here.  Presumably, this is a result of the changing cell size.  
+where $\lambda$ and $\mu$ are the first and second components of viscosity.  Generally, our methods stability seemed to be rather below that, with strange oscillations forming at factors much lower than indicated here.  Presumably, this is a result of the changing cell size.
+\\  
 \begin{figure}
   \centering
-  \includegraphics[width=0.7\textwidth]{masscons.eps}         
+  \includegraphics[width=0.7\textwidth]{massconsALE.eps}         
   \caption{Mass conservation for ALE.}
-  \label{fig:masscons}
+  \label{fig:massconsALE}
 \end{figure}
-The conservation properties of the ALE solver change fairly significantly over the original solver from the previous project.  This change is necessary, as the change of reference frame requires the separation of the divergence into two components.  It alters the symmetry of the momentum governing equations' summations, which means that they no longer sum to zero over the entire domain.  However, because of the particular problem configuration addressed in this work, neither momentum nor energy conservation can be verified.  Since a moving piston boundary is being considered, work is being done either on or by the system; therefore, the energy and momentum of the system are being directly affected.  We can, however, still establish mass conservation, by summing the densities multiplied by the volume of each cell and the number of cells.  This information is tracked in Figure~\ref{fig:masscons}.  It is evident from the image that mass is not quite fully conserved, though the variation is minimal over a full cycle, less than 1\% of the total.  
+The conservation properties of the ALE solver change fairly significantly over the original solver from the previous project.  This change is necessary, as the change of reference frame requires the separation of the divergence into two components.  It alters the symmetry of the momentum governing equations' summations, which means that they no longer sum to zero over the entire domain.  However, because of the particular problem configuration addressed in this work, neither momentum nor energy conservation can be verified.  Since a moving piston boundary is being considered, work is being done either on or by the system; therefore, the energy and momentum of the system are being directly affected.  We can, however, still establish mass conservation, by summing the densities multiplied by the volume of each cell and the number of cells.  This information is tracked in Figure~\ref{fig:massconsALE}.  It is evident from the image that mass is not quite fully conserved, though the variation is minimal over a full cycle, less than 1\% of the total.  
 
 \subsection{Immersed Boundary}
 
@@ -179,6 +203,19 @@ The conservation properties of the ALE solver change fairly significantly over t
 
 \section{Application: The Moving Piston}
 
+\begin{figure}
+  \centering
+  \includegraphics[width=0.7\textwidth]{pistonbef.png}         
+  \caption{Piston geometry considered.}
+  \label{fig:pistonbef}
+\end{figure}
+\begin{figure}
+  \centering
+  \includegraphics[width=0.7\textwidth]{pistonaft.png}         
+  \caption{Piston geometry after a full expansion, showing grid deformation in the ALE case.}
+  \label{fig:pistonaft}
+\end{figure}
+
 The great advantage of using both of these methods is their ability to handle moving objects within the flow, or objects which move the flow.  To that end, the test of these methods will be an application which is common in the field of fluid dynamics: the flow incuded by a moving piston.  The problem is two dimensional, with a fixed width in x, both dimensionally and non-dimensionally unity, and an advancing and withdrawing piston under two sets of velocity conditions.  In one condition, the piston will be examined with a constant velocity, given by the function:
 \begin{equation}
   v_w = 2 (L1-L2) \omega
@@ -188,7 +225,7 @@ where $\omega$ is the frequency of oscillation in cycles per second, though this
   v_w = \pi \omega (L2-L1) \sin{2 \pi \omega t}
 \end{equation}
 These two conditions are matched such that the frequency of oscillation is the same between them, and the resulting cycles should match pace, although not speed.  
-
+\\
 To compare between the two different methods presented, some non-dimensional parameters need to be established to maintain commonality in testing.  The piston Reynolds number, non-dimensional cycle frequency $\omega l/U$, and non-dimesional displacement $A/L$ were all kept approximately constant between the ALE and IB method cases.  This allows us to make comparisons between the flows in each solution method.
 
 %
@@ -196,42 +233,109 @@ To compare between the two different methods presented, some non-dimensional par
 \centering
 \vspace{-16pt}
 \hspace{2 in} ALE \hspace{4 in} IB
-$u$ \hspace{1.6 in} $v$\hspace{1.6 in}  $p$ \hspace{0.9 in} Streamlines
-\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} Ma = 0.8}
+$v$ \hspace{1.6 in} $p$\hspace{1.6 in}  $v$ \hspace{1.6 in} p
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1/4}
+\includegraphics[width=2in]{contour-V12-ALEexp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P12-ALEexp.png} \hspace{-20pt}
 \includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\vspace{-8pt}
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1/2}
+\includegraphics[width=2in]{contour-V25-ALEexp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P25-ALEexp.png} \hspace{-20pt}
 \includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\vspace{-8pt}
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 3/4}
+\includegraphics[width=2in]{contour-V37-ALEexp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P37-ALEexp.png} \hspace{-20pt}
 \includegraphics[width=2in]{} \hspace{-20pt}
-\includegraphics[width=2in]{contour-V50.png} 
+\includegraphics[width=2in]{} 
 }
 \vspace{-8pt}
-\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} Ma = 0.4}
-\includegraphics[width=2in]{compresspics/contour-U-10-ma04} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/contour-V-10-ma04} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/contour-P-10-ma04} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/streamplot-10-ma04} 
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1}
+\includegraphics[width=2in]{contour-V50-ALEexp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P50-ALEexp.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\caption{\label{fig:constexp} Constant velocity piston expansion for both ALE and IB methods.} 
+\end{figure}
+%
+
+%
+\begin{figure}
+\centering
+\vspace{-16pt}
+\hspace{2 in} ALE \hspace{4 in} IB
+$v$ \hspace{1.6 in} $p$\hspace{1.6 in}  $v$ \hspace{1.6 in} p
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1/4}
+\includegraphics[width=2in]{contour-V12-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P12-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
 }
 \vspace{-8pt}
-\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} Ma = 0.2}
-\includegraphics[width=2in]{compresspics/contour-U-10} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/contour-V-10} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/contour-P-10} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/streamplot-10} 
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1/2}
+\includegraphics[width=2in]{contour-V25-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P25-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
 }
 \vspace{-8pt}
-\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} Ma = 0.1 (ss)}
-\includegraphics[width=2in]{compresspics/contour-U-10-ma01} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/contour-V-10-ma01} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/contour-P-10-ma01} \hspace{-20pt}
-\includegraphics[width=2in]{compresspics/streamplot-10-ma01} 
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 3/4}
+\includegraphics[width=2in]{contour-V37-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P37-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
 }
 \vspace{-8pt}
-\makebox[\textwidth][c]{\rotatebox{90}{\hspace{22pt} Incompressible}
-\includegraphics[width=2in]{images/contour-U-10} \hspace{-20pt}
-\includegraphics[width=2in]{images/contour-V-10} \hspace{-20pt}
-\includegraphics[width=2in]{images/contour-P-10} \hspace{-20pt}
-\includegraphics[width=2in]{images/streamplot-10} 
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1}
+\includegraphics[width=2in]{contour-V50-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P50-ALEcomp.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
 }
-\caption{\label{fig:incma} Solutions at $t=10$ with varying Ma and for the compressible solver (bottom row). The solution for Ma = 0.1 is for steady plate motion with $u_W = \sin(10)$. All are 20 $\times$ 20 grids, except for Ma = 0.4 and 0.8 are 40 $\times$ 40 grids.} 
+\caption{\label{fig:constcomp} Constant velocity piston compression for both ALE and IB methods.} 
+\end{figure}
+%
+
+%
+\begin{figure}
+\centering
+\vspace{-16pt}
+\hspace{2 in} ALE \hspace{4 in} IB
+$v$ \hspace{1.6 in} $p$\hspace{1.6 in}  $v$ \hspace{1.6 in} p
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1/4}
+\includegraphics[width=2in]{contour-V25-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P25-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\vspace{-8pt}
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1/2}
+\includegraphics[width=2in]{contour-V50-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P50-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\vspace{-8pt}
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 3/4}
+\includegraphics[width=2in]{contour-V75-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P75-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\vspace{-8pt}
+\makebox[\textwidth][c]{\rotatebox{90}{\hspace{30pt} t$_c$ = 1}
+\includegraphics[width=2in]{contour-V100-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{contour-P100-ALEsin.png} \hspace{-20pt}
+\includegraphics[width=2in]{} \hspace{-20pt}
+\includegraphics[width=2in]{} 
+}
+\caption{\label{fig:sinusoid} Sinusoidal velocity piston expansion and compression for both ALE and IB methods.} 
 \end{figure}
 %
 
@@ -239,7 +343,7 @@ $u$ \hspace{1.6 in} $v$\hspace{1.6 in}  $p$ \hspace{0.9 in} Streamlines
 
 \subsection{ALE}
 
-At the conditions of primary testing, the ALE method performed reasonably well.  For the constant velocity expansion and contraction cases, the measured quantities behave as expected at long time.  Velocity and pressure as compared to the IB method can be seen in Figures~\ref{}.  There were, however, some minor issues initializing the constant withdrawal, as well as the compression.  Initially, the velocity field seemed to oscillate quite rapidly, presumably due to pressure waves initiated by the high jerk impulsive start of the piston.  As the simulation moves through time, however, such oscillations disappear.  The sinusoidal velocity profile also performed well, and can be seen in Figure~\ref{}.  The ALE solver performed much better when subjected to the smooth starting condition of the sinusoidal process; no strange oscillations were observed, presumably due to the smoother acceleration.  There were, unfortunately, some issues running at higher Re and Ma in all configurations. In those cases, oscillations would overwhelm the piston chamber and the code would blow up.  I believe it to be a result of the boundary conditions, as there were clearly interactions with pressure waves in these cases.  
+At the conditions of primary testing, the ALE method performed reasonably well.  For testing parameters, some dimensional and dimensionless quantities used as initial conditions are given here.  The box size, L, was 1 m, and the advancement/recession distance was 0.4 m.  Reynolds number was approximately 5, Ma was 0.002, and $\omega L/U$ is approximately 5.  Initial pressure was 100 kPa and temperature was 300 K.  For the constant velocity expansion and contraction cases, the measured quantities behave as expected at long time.  Velocity and pressure as compared to the IB method can be seen in Figures~\ref{fig:constexp} and~\ref{fig:constcomp}.  There were, however, some minor issues initializing the constant withdrawal, as well as the compression.  Initially, the velocity field seemed to oscillate quite rapidly, presumably due to pressure waves initiated by the high jerk impulsive start of the piston.  As the simulation moves through time, however, such oscillations disappear.  The sinusoidal velocity profile also performed well, and can be seen in Figure~\ref{fig:sinusoid}.  The ALE solver performed much better when subjected to the smooth starting condition of the sinusoidal process; no strange oscillations were observed, presumably due to the smoother acceleration.  There were, unfortunately, some issues running at higher Re and Ma in all configurations. In those cases, oscillations would overwhelm the piston chamber and the code would blow up.  I believe it to be a result of the boundary conditions, as there were clearly interactions with pressure waves in these cases.  
 
 \subsection{Immersed Boundary}
 
