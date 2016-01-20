@@ -23,11 +23,11 @@ program solver
      call mass_conservation
      
      if (t.ge.tprint) then
-        print *, 't', t
+        !print *, 't', t
         tprint = tprint + tend / 1000d+0
-        print *, 'v', v(10,15)
-        print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
-        print *, 'mass', total_mass
+        !print *, 'v', v(10,15)
+        !print *, 'vbound', boundary_v(3), 'ybound', boundaryloc(3)
+        print *, t, total_mass
         !print *, 'P  ', P(5,:)
         !print *, 'rho', rho(5,:)
         !print *, 'v  ', v(5,:)
@@ -381,7 +381,7 @@ subroutine dumpdata
   write(iunit,*) 'P ','U ', 'V ', 'T ', 'rho'
   do i=1,nx+1
      do j = 1,ny+1
-        write(iunit,"(E20.10$)") P(i,j), U(i,j), V(i,j), Temp(i,j), rho(i,j)
+        write(iunit,"(E20.10$)") P(i,j), U(i,j), V(i,j), Temp(i,j), rho(i,j), xx(i), yy(j)
         write(iunit,*) ''
      end do
   end do
@@ -518,13 +518,11 @@ subroutine update_ghost
      v(i,ghostrow) = ( boundary_v(i) - v(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
      Temp(i,ghostrow) = ( 1d+0          - Temp(i,ghostrow-1-nfreshcleared)*(1d+0 - a_int) )/a_int
 
-     !print *, a_int
-     if (a_int .le. 1d-4) then
-        !print *, 'Im here'
-        u(i,ghostrow) = boundary_u(i)
-        v(i,ghostrow) = boundary_v(i)
-        Temp(i,ghostrow) = 1d+0
-     end if
+   !  if (a_int .le. 1d-4) then
+   !     u(i,ghostrow) = boundary_u(i)
+   !     v(i,ghostrow) = boundary_v(i)
+   !     Temp(i,ghostrow) = 1d+0
+   !  end if
 
      ! pressure boundary condition
      select case(bc)
@@ -551,7 +549,6 @@ subroutine update_ghost
 
   ! Deal with the freshly cleared cells: interpolate from boundary and adjacent cells
   if (nfreshcleared .ne. 0) then
-     print *, 'dogs'
      do i = 2,nx
         do j = ghostrow-1, ghostrow-nfreshcleared
            ! Interpolation
